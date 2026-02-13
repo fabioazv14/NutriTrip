@@ -19,12 +19,21 @@ const isLastQuestion = computed(() => currentIndex.value === questions.length - 
 const isFirstQuestion = computed(() => currentIndex.value === 0)
 const savedAnswer = computed(() => {
   const ans = answers.value[currentIndex.value]
-  return ans ? ans.value : null
+  if (!ans) return null
+  // For multiple: ans is an array of values
+  // For single: ans is { label, value }
+  if (Array.isArray(ans)) return ans
+  return ans.value
 })
 
 function handleAnswer(option) {
+  // option is either { label, value } (single) or [...values] (multiple)
   answers.value[currentIndex.value] = option
   answered.value = true
+  // For multiple, consider answered if at least 1 selected
+  if (Array.isArray(option) && option.length === 0) {
+    answered.value = false
+  }
   console.log('Selected:', option)
 }
 
@@ -99,6 +108,7 @@ function prevQuestion() {
           :key="currentIndex"
           :question="currentQuestion.question"
           :options="currentQuestion.options"
+          :multiple="currentQuestion.multiple || false"
           :selected-value="savedAnswer"
           @select="handleAnswer"
         />
