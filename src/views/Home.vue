@@ -11,7 +11,7 @@ import Question from '@/components/Question.vue';
 
 <style scoped>
 .home {
-  padding: 32px;
-  text-align: center;
+  margin: 0;
+  padding: 0;
 }
 </style>
