@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   question: {
@@ -10,10 +10,18 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  selectedValue: {
+    type: String,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['select'])
-const selected = ref(null)
+const selected = ref(props.selectedValue)
+
+watch(() => props.selectedValue, (val) => {
+  selected.value = val
+})
 
 function handleSelect(option) {
   selected.value = option.value

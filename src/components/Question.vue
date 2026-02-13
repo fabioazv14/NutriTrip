@@ -12,9 +12,15 @@ const answered = ref(false)
 const swiping = ref(false)
 const showCard = ref(true)
 const finishing = ref(false)
+const direction = ref('forward') // 'forward' or 'back'
 
 const currentQuestion = computed(() => questions[currentIndex.value])
 const isLastQuestion = computed(() => currentIndex.value === questions.length - 1)
+const isFirstQuestion = computed(() => currentIndex.value === 0)
+const savedAnswer = computed(() => {
+  const ans = answers.value[currentIndex.value]
+  return ans ? ans.value : null
+})
 
 function handleAnswer(option) {
   answers.value[currentIndex.value] = option
@@ -26,28 +32,54 @@ function nextQuestion() {
   if (swiping.value) return
 
   if (!isLastQuestion.value) {
+    direction.value = 'forward'
     swiping.value = true
     showCard.value = false
 
     setTimeout(async () => {
       currentIndex.value++
-      answered.value = false
+      // Restore previous answer if it exists
+      answered.value = !!answers.value[currentIndex.value]
       await nextTick()
       showCard.value = true
       swiping.value = false
     }, 400)
   } else {
-    // Last question — trigger exit animation then go to dashboard
     finishing.value = true
     setTimeout(() => {
       router.push('/dashboard')
     }, 800)
   }
 }
+
+function prevQuestion() {
+  if (swiping.value || isFirstQuestion.value) return
+
+  direction.value = 'back'
+  swiping.value = true
+  showCard.value = false
+
+  setTimeout(async () => {
+    currentIndex.value--
+    answered.value = !!answers.value[currentIndex.value]
+    await nextTick()
+    showCard.value = true
+    swiping.value = false
+  }, 400)
+}
 </script>
 
 <template>
   <div class="question" :class="{ 'exit-animation': finishing }">
+    <!-- Prev arrow — full-height bar on the left -->
+    <button
+      v-if="!isFirstQuestion && !finishing"
+      class="prev-bar"
+      @click="prevQuestion"
+    >
+      <span>‹</span>
+    </button>
+
     <div class="question-wrapper">
       <!-- Progress -->
       <div class="progress">
@@ -61,12 +93,13 @@ function nextQuestion() {
       </div>
 
       <!-- Card with swipe animation -->
-      <Transition name="swipe" mode="out-in">
+      <Transition :name="direction === 'forward' ? 'swipe-forward' : 'swipe-back'" mode="out-in">
         <QuestionCard
           v-if="showCard"
           :key="currentIndex"
           :question="currentQuestion.question"
           :options="currentQuestion.options"
+          :selected-value="savedAnswer"
           @select="handleAnswer"
         />
       </Transition>
@@ -142,30 +175,42 @@ function nextQuestion() {
   transition: width 0.4s ease;
 }
 
-/* Swipe animation — leave: card flies out to the left */
-.swipe-leave-active {
+/* Forward swipe — leave: flies left, enter: comes from right */
+.swipe-forward-leave-active,
+.swipe-forward-enter-active {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.swipe-leave-to {
+.swipe-forward-leave-to {
   transform: translateX(-120%) rotate(-8deg);
   opacity: 0;
 }
 
-/* Swipe animation — enter: new card slides in from the right */
-.swipe-enter-active {
-  transition: all 0.4s cubic-bezier(0.0, 0, 0.2, 1);
-}
-
-.swipe-enter-from {
+.swipe-forward-enter-from {
   transform: translateX(100%) rotate(5deg);
   opacity: 0;
 }
 
-/* Next bar — full height, right side */
-.next-bar {
+/* Back swipe — leave: flies right, enter: comes from left */
+.swipe-back-leave-active,
+.swipe-back-enter-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.swipe-back-leave-to {
+  transform: translateX(120%) rotate(8deg);
+  opacity: 0;
+}
+
+.swipe-back-enter-from {
+  transform: translateX(-100%) rotate(-5deg);
+  opacity: 0;
+}
+
+/* Shared bar styles */
+.next-bar,
+.prev-bar {
   position: fixed;
-  right: 0;
   top: 0;
   width: 100px;
   height: 100vh;
@@ -179,22 +224,46 @@ function nextQuestion() {
   font-weight: 700;
   color: rgba(34, 197, 94, 0.5);
   transition: all 0.3s ease;
-  animation: slideIn 0.3s ease;
 }
 
-.next-bar:hover {
+.next-bar:hover,
+.prev-bar:hover {
   background: rgba(34, 197, 94, 0.95);
   color: #ffffff;
 }
 
-.next-bar:active {
+.next-bar:active,
+.prev-bar:active {
   background: #16a34a;
 }
 
-@keyframes slideIn {
+/* Right bar */
+.next-bar {
+  right: 0;
+  animation: slideInRight 0.3s ease;
+}
+
+/* Left bar */
+.prev-bar {
+  left: 0;
+  animation: slideInLeft 0.3s ease;
+}
+
+@keyframes slideInRight {
   from {
     opacity: 0;
     transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
   }
   to {
     opacity: 1;
