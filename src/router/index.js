@@ -12,13 +12,21 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue'),
-    meta: { hideNavbar: true },
   },
   {
     path: '/register',
     name: 'Register',
     component: () => import('../views/Register.vue'),
-    meta: { hideNavbar: true },
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/chatbot',
+    name: 'Chatbot',
+    component: () => import('../views/Chatbot.vue'),
   },
 ]
 
