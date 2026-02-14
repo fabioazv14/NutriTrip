@@ -27,8 +27,20 @@ function handleRegister() {
 
   // TODO: add real registration logic
   console.log('Register:', name.value, email.value, password.value)
+  
+  // Simulate successful registration
   localStorage.setItem('isAuthenticated', 'true')
-  router.push('/dashboard')
+  
+  // Set a default profile for the new user
+  const defaultProfile = {
+    goal: 'maintain',
+    diet: [],
+    allergies: [],
+    budget: 'medium'
+  }
+  localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
+
+  router.push('/questionnaire') // Maybe redirect to questionnaire for new users?
 }
 </script>
 

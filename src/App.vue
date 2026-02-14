@@ -9,11 +9,13 @@ const showNavbar = computed(() => !route.meta.hideNavbar)
 const isOnboarded = ref(false)
 
 function checkOnboarded() {
-  isOnboarded.value = !!localStorage.getItem('nutritrip_profile')
+  isOnboarded.value = !!localStorage.getItem('nutritrip_profile') || localStorage.getItem('isAuthenticated') === 'true'
 }
 
 function handleLogout() {
   localStorage.removeItem('nutritrip_profile')
+  localStorage.removeItem('isAuthenticated')
+  localStorage.removeItem('hasCompletedQuestionnaire')
   checkOnboarded()
   router.push('/')
 }

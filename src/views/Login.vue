@@ -11,7 +11,23 @@ const showPassword = ref(false)
 function handleLogin() {
   // TODO: add real authentication logic
   console.log('Login:', email.value, password.value)
+  
+  // Simulate successful login
   localStorage.setItem('isAuthenticated', 'true')
+  
+  // Set a default profile if none exists, to satisfy the app's onboarding check
+  if (!localStorage.getItem('nutritrip_profile')) {
+    const defaultProfile = {
+      goal: 'maintain',
+      diet: [],
+      allergies: [],
+      budget: 'medium'
+    }
+    localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
+  }
+  
+  // Force a reload or event dispatch if necessary, strictly speaking router push should trigger the watch in App.vue
+  // but App.vue watches route.path, so navigation acts as the trigger.
   router.push('/dashboard')
 }
 </script>
