@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { authApi } from '@/services/api'
 
 const router = useRouter()
 const isLogin = ref(true) // Toggle between Login and Register
@@ -19,17 +20,21 @@ const confirmPassword = ref('')
 const showRegisterPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-function handleLogin() {
-  // TODO: add real authentication logic
-  console.log('Login:', loginEmail.value, loginPassword.value)
-  localStorage.setItem('isAuthenticated', 'true')
-  // Also set profile to trigger navbar update
-  localStorage.setItem('nutritrip_profile', JSON.stringify({ email: loginEmail.value }))
-  window.dispatchEvent(new Event('storage')) // Force update if needed
-  router.push('/dashboard')
+async function handleLogin() {
+  error.value = ''
+  try {
+    const response = await authApi.login(loginEmail.value, loginPassword.value)
+    
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('nutritrip_profile', JSON.stringify(response))
+    window.dispatchEvent(new Event('storage')) // Force update if needed
+    router.push('/dashboard')
+  } catch (err) {
+    error.value = err.message
+  }
 }
 
-function handleRegister() {
+async function handleRegister() {
   error.value = ''
 
   if (registerPassword.value.length < 6) {
@@ -42,14 +47,25 @@ function handleRegister() {
     return
   }
 
-  // TODO: add real registration logic
-  console.log('Register:', registerName.value, registerEmail.value, registerPassword.value)
-  localStorage.setItem('isAuthenticated', 'true')
-  // Also set profile to trigger navbar update
-  localStorage.setItem('nutritrip_profile', JSON.stringify({ name: registerName.value, email: registerEmail.value }))
-  window.dispatchEvent(new Event('storage')) // Force update if needed
-  // Redirect to Questionnaire on sign up
-  router.push('/questionnaire')
+  try {
+    // Missing fields in UI: dob, genero. Using defaults for now.
+    const response = await authApi.signup({
+      nome: registerName.value,
+      email: registerEmail.value,
+      password: registerPassword.value,
+      dob: '2000-01-01',
+      genero: 'O'
+    })
+
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('nutritrip_profile', JSON.stringify(response))
+    window.dispatchEvent(new Event('storage')) // Force update if needed
+    // Redirect to Questionnaire on sign up
+    router.push('/questionnaire')
+  } catch (err) {
+    console.error(err)
+    error.value = err.message || 'Registration failed'
+  }
 }
 </script>
 
