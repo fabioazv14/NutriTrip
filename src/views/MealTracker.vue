@@ -222,9 +222,9 @@ function removeMeal(id) {
 .tracker-page {
   min-height: 100vh;
   background: #f8faf8;
-  padding: 32px;
+  padding: 32px 48px;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
