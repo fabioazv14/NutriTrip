@@ -24,6 +24,11 @@ const routes = [
     component: () => import('../views/Dashboard.vue'),
   },
   {
+    path: '/meals',
+    name: 'MealTracker',
+    component: () => import('../views/MealTracker.vue'),
+  },
+  {
     path: '/chatbot',
     name: 'Chatbot',
     component: () => import('../views/Chatbot.vue'),

@@ -12,6 +12,7 @@ const showNavbar = computed(() => !route.meta.hideNavbar)
     <div class="nav-left">
       <span class="brand">🥗 NutriTrip</span>
       <RouterLink to="/dashboard">Dashboard</RouterLink>
+      <RouterLink to="/meals">Meals</RouterLink>
       <RouterLink to="/chatbot">Chatbot</RouterLink>
     </div>
     <div class="nav-right">
