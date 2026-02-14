@@ -6,6 +6,7 @@ const router = Router()
 router.post('/chat', aiController.chat)
 router.post('/scan-meal', aiController.scanMeal)
 router.post('/clear', aiController.clearHistory)
+router.post('/suggestions', aiController.getSuggestions)
 router.get('/history/:sessionId', aiController.getHistory)
 
 export default router

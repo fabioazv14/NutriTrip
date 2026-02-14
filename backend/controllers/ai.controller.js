@@ -71,4 +71,22 @@ export const aiController = {
       next(error)
     }
   },
+
+  /**
+   * POST /api/ai/suggestions
+   * Body: { userProfile }
+   */
+  async getSuggestions(req, res, next) {
+    try {
+      const { userProfile } = req.body
+      const result = await aiService.getSuggestions(userProfile)
+      if (result) {
+        res.json(result)
+      } else {
+        res.status(500).json({ error: 'Failed to generate suggestions' })
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
 }

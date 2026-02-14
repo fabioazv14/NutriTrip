@@ -1,8 +1,9 @@
 import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { SYSTEM_PROMPT, TAG_EXTRACTION_SUFFIX, buildUserContext, parseTagsFromResponse } from '../utils/prompts.js'
+import { SYSTEM_PROMPT, TAG_EXTRACTION_SUFFIX, buildUserContext, buildMealsSummary, parseTagsFromResponse } from '../utils/prompts.js'
 import { userModel } from '../models/user.model.js'
+import { mealModel } from '../models/nutrition.model.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -110,8 +111,15 @@ export const aiService = {
       tagsSummary = userModel.getTagsSummary(userId)
     } catch { /* DB not ready yet, that's fine */ }
 
-    // Build system message with user context + learned tags
-    const systemMessage = SYSTEM_PROMPT + TAG_EXTRACTION_SUFFIX + buildUserContext(userProfile, tagsSummary)
+    // Get today's meals for context
+    let mealsSummary = ''
+    try {
+      const todayMeals = mealModel.getToday(userId)
+      mealsSummary = buildMealsSummary(todayMeals)
+    } catch { /* DB not ready yet */ }
+
+    // Build system message with user context + learned tags + today's meals
+    const systemMessage = SYSTEM_PROMPT + TAG_EXTRACTION_SUFFIX + buildUserContext(userProfile, tagsSummary, mealsSummary)
 
     // Trim history before sending
     if (history.length > MAX_HISTORY) {
@@ -177,5 +185,80 @@ export const aiService = {
    */
   getHistory(sessionId) {
     return conversations.get(sessionId) || []
+  },
+
+  /**
+   * Get personalized meal suggestions based on preferences and meal history
+   */
+  async getSuggestions(userProfile = null) {
+    const userId = userProfile?.userId || 'guest'
+
+    // Gather context
+    let tagsSummary = ''
+    try {
+      tagsSummary = userModel.getTagsSummary(userId)
+    } catch { /* DB not ready */ }
+
+    let mealsSummary = ''
+    try {
+      const todayMeals = mealModel.getToday(userId)
+      mealsSummary = buildMealsSummary(todayMeals)
+    } catch { /* DB not ready */ }
+
+    let recentMealNames = ''
+    try {
+      const recent = mealModel.getRecent(userId, 3)
+      if (recent.length > 0) {
+        const names = recent.filter(m => m.name).map(m => m.name)
+        if (names.length > 0) {
+          recentMealNames = `\nRecent meals (last 3 days): ${names.join(', ')}`
+        }
+      }
+    } catch { /* DB not ready */ }
+
+    const hour = new Date().getHours()
+    let mealTime = 'dinner'
+    if (hour < 10) mealTime = 'breakfast'
+    else if (hour < 14) mealTime = 'lunch'
+    else if (hour < 17) mealTime = 'snack'
+
+    const userContext = buildUserContext(userProfile, tagsSummary, mealsSummary + recentMealNames)
+
+    const prompt = `Based on the user's profile, preferences, and meal history, suggest exactly 3 ${mealTime} ideas.
+${userContext}
+
+IMPORTANT: Respond ONLY with valid JSON, no other text. Use this exact format:
+[
+  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "~XXX kcal", "emoji": "single food emoji"},
+  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "~XXX kcal", "emoji": "single food emoji"},
+  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "~XXX kcal", "emoji": "single food emoji"}
+]
+
+Rules:
+- Avoid suggesting meals the user already ate today
+- Respect allergies, dislikes and dietary restrictions
+- Match the user's goal (${userProfile?.goal || 'maintain'})
+- Suggest variety from recent meals
+- Keep descriptions concise`
+
+    try {
+      const result = await callPython({
+        message: prompt,
+        history: [],
+        systemPrompt: 'You are a JSON-only meal suggestion API. Return ONLY valid JSON arrays, no markdown, no explanation.',
+      })
+
+      const jsonStr = result.response.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      const suggestions = JSON.parse(jsonStr)
+
+      if (Array.isArray(suggestions) && suggestions.length > 0) {
+        return { suggestions, mealTime }
+      }
+
+      throw new Error('Invalid suggestions format')
+    } catch (error) {
+      // Return null so the frontend can fall back to hardcoded
+      return null
+    }
   },
 }

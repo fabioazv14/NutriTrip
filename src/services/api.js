@@ -46,6 +46,13 @@ export const aiApi = {
       body: JSON.stringify({ image: imageBase64, mealType }),
     })
   },
+
+  async getSuggestions(userProfile = null) {
+    return request('/ai/suggestions', {
+      method: 'POST',
+      body: JSON.stringify({ userProfile }),
+    })
+  },
 }
 
 export const nutritionApi = {
@@ -64,5 +71,29 @@ export const nutritionApi = {
     return request(`/nutrition/tags/${userId}/${tagId}`, {
       method: 'DELETE',
     })
+  },
+}
+
+export const mealsApi = {
+  async saveMeal(meal, userId = 'guest') {
+    return request('/nutrition/meals', {
+      method: 'POST',
+      body: JSON.stringify({ userId, ...meal }),
+    })
+  },
+
+  async getMeals(userId = 'guest', date = null) {
+    const query = date ? `?date=${date}` : ''
+    return request(`/nutrition/meals/${userId}${query}`)
+  },
+
+  async deleteMeal(mealId, userId = 'guest') {
+    return request(`/nutrition/meals/${userId}/${mealId}`, {
+      method: 'DELETE',
+    })
+  },
+
+  async getStats(userId = 'guest') {
+    return request(`/nutrition/meals/${userId}/stats`)
   },
 }

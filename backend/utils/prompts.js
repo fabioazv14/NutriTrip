@@ -34,7 +34,7 @@ Rules for tags:
 - If no preferences are expressed, do NOT include the [TAGS] block at all
 - The [TAGS] block must be the very LAST thing in your response`
 
-export function buildUserContext(profile, tagsSummary = '') {
+export function buildUserContext(profile, tagsSummary = '', mealsSummary = '') {
   const parts = []
 
   if (profile) {
@@ -48,9 +48,40 @@ export function buildUserContext(profile, tagsSummary = '') {
     parts.push(`\nLearned preferences:\n${tagsSummary}`)
   }
 
+  if (mealsSummary) {
+    parts.push(`\n${mealsSummary}`)
+  }
+
   if (parts.length === 0) return ''
 
   return `\n\nUser profile:\n${parts.join('\n')}`
+}
+
+/**
+ * Build a summary of today's meals for the AI context
+ */
+export function buildMealsSummary(meals) {
+  if (!meals || meals.length === 0) return ''
+
+  const lines = meals.map(m => {
+    const parts = [`- ${m.meal_type}`]
+    if (m.name) parts[0] += `: ${m.name}`
+    if (m.note && m.note !== m.name) parts[0] += ` (${m.note})`
+
+    const macros = []
+    if (m.calories) macros.push(`${m.calories} kcal`)
+    if (m.protein) macros.push(`${m.protein}g protein`)
+    if (m.carbs) macros.push(`${m.carbs}g carbs`)
+    if (m.fat) macros.push(`${m.fat}g fat`)
+    if (macros.length > 0) parts[0] += ` — ${macros.join(', ')}`
+
+    const time = m.logged_at ? new Date(m.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
+    if (time) parts[0] += ` (at ${time})`
+
+    return parts[0]
+  })
+
+  return `Today's logged meals:\n${lines.join('\n')}`
 }
 
 /**
