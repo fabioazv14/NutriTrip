@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { aiApi } from '../services/api.js'
+import { ref, computed, onMounted } from 'vue'
+import { aiApi, mealsApi } from '../services/api.js'
 
 const meals = ref([])
 const showUpload = ref(false)
@@ -14,6 +14,8 @@ const mealNote = ref('')
 const isScanning = ref(false)
 const scanResult = ref(null)
 const scanError = ref(null)
+const isSaving = ref(false)
+const isLoading = ref(false)
 
 const mealTypes = [
   { label: 'Breakfast', value: 'breakfast', icon: '/icons/breakfast.svg' },
@@ -42,6 +44,38 @@ const todayCarbs = computed(() =>
 const todayFat = computed(() =>
   todayMeals.value.reduce((sum, m) => sum + (m.fat || 0), 0)
 )
+
+// Load meals from database on mount
+onMounted(async () => {
+  await loadMeals()
+})
+
+async function loadMeals() {
+  isLoading.value = true
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const dbMeals = await mealsApi.getMeals('guest', today)
+    meals.value = dbMeals.map(m => ({
+      id: m.id,
+      type: m.meal_type,
+      typeLabel: mealTypes.find(mt => mt.value === m.meal_type)?.label,
+      typeIcon: mealTypes.find(mt => mt.value === m.meal_type)?.icon,
+      note: m.note,
+      image: m.image_path,
+      date: m.logged_at,
+      time: new Date(m.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      name: m.name,
+      calories: m.calories || 0,
+      protein: m.protein || 0,
+      carbs: m.carbs || 0,
+      fat: m.fat || 0,
+    }))
+  } catch (err) {
+    console.error('Failed to load meals:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function openUpload() {
   showUpload.value = true
@@ -114,34 +148,54 @@ async function retryScan() {
   }
 }
 
-function saveMeal() {
-  if (!previewUrl.value) return
+async function saveMeal() {
+  if (!previewUrl.value || isSaving.value) return
 
-  meals.value.unshift({
-    id: Date.now(),
-    type: mealType.value,
-    typeLabel: mealTypes.find(m => m.value === mealType.value)?.label,
-    typeIcon: mealTypes.find(m => m.value === mealType.value)?.icon,
-    note: mealNote.value,
-    image: previewUrl.value,
-    date: new Date().toISOString(),
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    // Nutrition from AI scan
-    name: scanResult.value?.name || null,
-    description: scanResult.value?.description || null,
-    calories: scanResult.value?.calories || 0,
-    protein: scanResult.value?.protein || 0,
-    carbs: scanResult.value?.carbs || 0,
-    fat: scanResult.value?.fat || 0,
-    confidence: scanResult.value?.confidence || null,
-    items: scanResult.value?.items || [],
-  })
+  isSaving.value = true
+  try {
+    const savedMeal = await mealsApi.saveMeal({
+      mealType: mealType.value,
+      name: scanResult.value?.name || mealNote.value || null,
+      note: mealNote.value,
+      image: previewUrl.value,
+      calories: scanResult.value?.calories || 0,
+      protein: scanResult.value?.protein || 0,
+      carbs: scanResult.value?.carbs || 0,
+      fat: scanResult.value?.fat || 0,
+    })
 
-  closeUpload()
+    meals.value.unshift({
+      id: savedMeal.id,
+      type: savedMeal.meal_type,
+      typeLabel: mealTypes.find(m => m.value === savedMeal.meal_type)?.label,
+      typeIcon: mealTypes.find(m => m.value === savedMeal.meal_type)?.icon,
+      note: savedMeal.note,
+      image: savedMeal.image_path,
+      date: savedMeal.logged_at,
+      time: new Date(savedMeal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      name: savedMeal.name,
+      calories: savedMeal.calories || 0,
+      protein: savedMeal.protein || 0,
+      carbs: savedMeal.carbs || 0,
+      fat: savedMeal.fat || 0,
+    })
+
+    closeUpload()
+  } catch (err) {
+    console.error('Failed to save meal:', err)
+  } finally {
+    isSaving.value = false
+  }
 }
 
-function removeMeal(id) {
-  meals.value = meals.value.filter(m => m.id !== id)
+async function removeMeal(id) {
+  try {
+    await mealsApi.deleteMeal(id)
+    meals.value = meals.value.filter(m => m.id !== id)
+  } catch (err) {
+    console.error('Failed to delete meal:', err)
+    meals.value = meals.value.filter(m => m.id !== id)
+  }
 }
 </script>
 
@@ -150,7 +204,7 @@ function removeMeal(id) {
     <!-- Header -->
     <div class="tracker-header">
       <div>
-        <h1><img src="/icons/meal-tracker.svg" alt="" class="header-icon" /> Meal Tracker</h1>
+        <h1><img src="/pan-food.png" alt="" class="header-icon" /> Meal Tracker</h1>
         <p class="subtitle">Track your meals by snapping a photo</p>
       </div>
       <div class="stats">
@@ -308,10 +362,10 @@ function removeMeal(id) {
           <!-- Save -->
           <button
             class="save-btn"
-            :disabled="!previewUrl || isScanning"
+            :disabled="!previewUrl || isScanning || isSaving"
             @click="saveMeal"
           >
-            {{ isScanning ? 'Analyzing...' : scanResult ? 'Save Meal' : 'Save without analysis' }}
+            {{ isSaving ? 'Saving...' : isScanning ? 'Analyzing...' : scanResult ? 'Save Meal' : 'Save without analysis' }}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { nutritionApi } from '../services/api.js'
+import { nutritionApi, aiApi } from '../services/api.js'
 
 const router = useRouter()
 
@@ -25,7 +25,7 @@ const today = computed(() => {
 
 // Goal display
 const goalLabels = { lose: 'Lose weight', maintain: 'Maintain weight', gain: 'Gain weight' }
-const goalEmojis = { lose: '🔥', maintain: '⚖️', gain: '💪' }
+const goalIcons = { lose: '/icons/flame.svg', maintain: '/icons/scale.svg', gain: '/icons/muscle.svg' }
 
 // Diet display
 const dietLabels = {
@@ -43,8 +43,8 @@ const dailyTip = computed(() => {
   return tips[dayOfYear % tips.length]
 })
 
-// AI meal suggestion based on profile goal
-const mealSuggestions = {
+// AI meal suggestion based on profile goal (fallback)
+const fallbackSuggestions = {
   lose: [
     { name: 'Grilled Chicken Salad', desc: 'High protein, low calorie lunch option', cal: '~380 kcal', emoji: '🥗' },
     { name: 'Greek Yogurt Bowl', desc: 'With berries and a drizzle of honey', cal: '~250 kcal', emoji: '🫐' },
@@ -62,18 +62,32 @@ const mealSuggestions = {
   ],
 }
 
+// Dynamic AI suggestions
+const aiSuggestions = ref(null)
+const loadingSuggestions = ref(false)
+const aiMealTime = ref(null)
+
 const suggestedMeals = computed(() => {
+  if (aiSuggestions.value) return aiSuggestions.value
   const goal = profile.value?.goal || 'maintain'
-  return mealSuggestions[goal] || mealSuggestions.maintain
+  return fallbackSuggestions[goal] || fallbackSuggestions.maintain
 })
 
 // Next meal hint based on time of day
-const nextMealLabel = computed(() => {
+const mealTimeConfig = {
+  breakfast: { label: 'Breakfast ideas', icon: '/icons/sunrise.svg' },
+  lunch: { label: 'Lunch ideas', icon: '/icons/sun.svg' },
+  snack: { label: 'Snack ideas', icon: '/sandwich.png' },
+  dinner: { label: 'Dinner ideas', icon: '/icons/moon.svg' },
+}
+
+const nextMealConfig = computed(() => {
+  if (aiMealTime.value) return mealTimeConfig[aiMealTime.value] || mealTimeConfig.dinner
   const hour = new Date().getHours()
-  if (hour < 10) return '🌅 Breakfast ideas'
-  if (hour < 14) return '☀️ Lunch ideas'
-  if (hour < 17) return '🍎 Snack ideas'
-  return '🌙 Dinner ideas'
+  if (hour < 10) return mealTimeConfig.breakfast
+  if (hour < 14) return mealTimeConfig.lunch
+  if (hour < 17) return mealTimeConfig.snack
+  return mealTimeConfig.dinner
 })
 
 // Profile diet display
@@ -93,7 +107,23 @@ onMounted(() => {
   if (saved) profile.value = JSON.parse(saved)
   updateStreak()
   loadTags()
+  loadSuggestions()
 })
+
+async function loadSuggestions() {
+  loadingSuggestions.value = true
+  try {
+    const result = await aiApi.getSuggestions(profile.value)
+    if (result && result.suggestions) {
+      aiSuggestions.value = result.suggestions
+      aiMealTime.value = result.mealTime
+    }
+  } catch {
+    // Keep fallback suggestions
+  } finally {
+    loadingSuggestions.value = false
+  }
+}
 
 function updateStreak() {
   const todayStr = new Date().toDateString()
@@ -122,11 +152,11 @@ const newTagText = ref('')
 const newTagType = ref('like')
 
 const tagTypeOptions = [
-  { value: 'like', label: 'Like', emoji: '💚' },
-  { value: 'dislike', label: 'Dislike', emoji: '👎' },
-  { value: 'allergy', label: 'Allergy', emoji: '⚠️' },
-  { value: 'avoid', label: 'Avoid', emoji: '🚫' },
-  { value: 'goal', label: 'Goal', emoji: '🎯' },
+  { value: 'like', label: 'Like', icon: '✓' },
+  { value: 'dislike', label: 'Dislike', icon: '✗' },
+  { value: 'allergy', label: 'Allergy', icon: '!' },
+  { value: 'avoid', label: 'Avoid', icon: '—' },
+  { value: 'goal', label: 'Goal', icon: '◎' },
 ]
 
 const allTags = computed(() => {
@@ -142,11 +172,11 @@ const allTags = computed(() => {
 })
 
 const tagTypeConfig = {
-  like: { emoji: '💚', color: '#dcfce7', text: '#166534' },
-  dislike: { emoji: '👎', color: '#fee2e2', text: '#991b1b' },
-  allergy: { emoji: '⚠️', color: '#fef3c7', text: '#92400e' },
-  avoid: { emoji: '🚫', color: '#f3e8ff', text: '#6b21a8' },
-  goal: { emoji: '🎯', color: '#dbeafe', text: '#1e40af' },
+  like: { icon: '✓', color: '#dcfce7', text: '#166534' },
+  dislike: { icon: '✗', color: '#fee2e2', text: '#991b1b' },
+  allergy: { icon: '!', color: '#fef3c7', text: '#92400e' },
+  avoid: { icon: '—', color: '#f3e8ff', text: '#6b21a8' },
+  goal: { icon: '◎', color: '#dbeafe', text: '#1e40af' },
 }
 
 async function loadTags() {
@@ -177,11 +207,11 @@ async function removeTag(tagId) {
     <!-- Header -->
     <div class="dash-header">
       <div>
-        <h1>{{ greeting }}! 👋</h1>
+        <h1>{{ greeting }}! </h1>
         <p class="date">{{ today }}</p>
       </div>
       <div class="streak-badge" v-if="streak > 0">
-        <span class="streak-fire">🔥</span>
+        <img src="/icons/flame.svg" alt="" class="streak-fire" />
         <div>
           <span class="streak-count">{{ streak }}</span>
           <span class="streak-label">day{{ streak !== 1 ? 's' : '' }} streak</span>
@@ -193,24 +223,30 @@ async function removeTag(tagId) {
     <div class="top-row">
       <!-- Profile summary -->
       <div class="card profile-card">
-        <h2>👤 Your Profile</h2>
+        <h2><img src="/icons/user.svg" alt="" class="section-icon" /> Your Profile</h2>
         <div class="profile-items">
           <div class="profile-item">
-            <span class="pi-icon">{{ profile?.goal ? goalEmojis[profile.goal] : '🎯' }}</span>
+            <span class="pi-icon">
+              <img :src="profile?.goal ? goalIcons[profile.goal] : '/icons/target.svg'" alt="" class="pi-svg" />
+            </span>
             <div>
               <span class="pi-label">Goal</span>
               <span class="pi-value">{{ profile?.goal ? goalLabels[profile.goal] : 'Not set' }}</span>
             </div>
           </div>
           <div class="profile-item">
-            <span class="pi-icon">🥗</span>
+            <span class="pi-icon">
+              <img src="/icons/diet.svg" alt="" class="pi-svg" />
+            </span>
             <div>
               <span class="pi-label">Diet</span>
               <span class="pi-value">{{ profileDiets.length ? profileDiets.join(', ') : 'No preference' }}</span>
             </div>
           </div>
           <div v-if="profileAllergies.length" class="profile-item allergy-item">
-            <span class="pi-icon">⚠️</span>
+            <span class="pi-icon">
+              <img src="/icons/alert.svg" alt="" class="pi-svg" />
+            </span>
             <div>
               <span class="pi-label">Allergies</span>
               <span class="pi-value allergy-value">{{ profileAllergies.join(', ') }}</span>
@@ -229,10 +265,14 @@ async function removeTag(tagId) {
       <!-- Meal suggestions -->
       <div class="card next-meal-card">
         <div class="card-header">
-          <h2>{{ nextMealLabel }}</h2>
-          <span class="card-badge">Based on your goal</span>
+          <h2><img :src="nextMealConfig.icon" alt="" class="section-icon" /> {{ nextMealConfig.label }}</h2>
+          <span class="card-badge">{{ aiSuggestions ? 'Personalized for you' : 'Based on your goal' }}</span>
         </div>
-        <div class="meal-suggestions">
+        <div v-if="loadingSuggestions" class="suggestions-loading">
+          <div class="loading-spinner"></div>
+          <span>Generating personalized ideas...</span>
+        </div>
+        <div v-else class="meal-suggestions">
           <div v-for="meal in suggestedMeals" :key="meal.name" class="suggestion-item">
             <span class="suggestion-emoji">{{ meal.emoji }}</span>
             <div class="suggestion-info">
@@ -242,12 +282,17 @@ async function removeTag(tagId) {
             <span class="suggestion-cal">{{ meal.cal }}</span>
           </div>
         </div>
-        <button class="ask-ai-btn" @click="router.push('/chatbot')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          Ask AI for more ideas
-        </button>
+        <div class="meal-card-actions">
+          <button v-if="!loadingSuggestions" class="refresh-btn" @click="loadSuggestions" title="Get new suggestions">
+            <img src="/icons/refresh.svg" alt="" class="btn-icon" /> Refresh
+          </button>
+          <button class="ask-ai-btn" @click="router.push('/chatbot')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Ask AI for more ideas
+          </button>
+        </div>
       </div>
     </div>
 
@@ -268,7 +313,7 @@ async function removeTag(tagId) {
 
       <button class="qa-btn" @click="router.push('/chatbot')">
         <div class="qa-icon qa-ai">
-          <img src="/icons/meal-tracker.svg" alt="" />
+          <img src="/pan-food.png" alt="" />
         </div>
         <div class="qa-text">
           <span class="qa-title">Ask NutriTrip AI</span>
@@ -283,7 +328,7 @@ async function removeTag(tagId) {
     <!-- Learned Preferences (Tags) -->
     <div class="card tags-card">
       <div class="card-header">
-        <h2>🏷️ Learned Preferences</h2>
+        <h2><img src="/icons/tag.svg" alt="" class="section-icon" /> Learned Preferences</h2>
         <button class="add-tag-toggle" @click="showAddTag = !showAddTag">
           {{ showAddTag ? '✕' : '+ Add' }}
         </button>
@@ -301,7 +346,7 @@ async function removeTag(tagId) {
               :class="{ active: newTagType === opt.value }"
               @click="newTagType = opt.value"
             >
-              {{ opt.emoji }} {{ opt.label }}
+              {{ opt.icon }} {{ opt.label }}
             </button>
           </div>
           <div class="tag-input-row">
@@ -325,7 +370,7 @@ async function removeTag(tagId) {
           class="pref-tag"
           :style="{ background: tagTypeConfig[t.type]?.color, color: tagTypeConfig[t.type]?.text }"
         >
-          {{ tagTypeConfig[t.type]?.emoji }} {{ t.tag }}
+          {{ tagTypeConfig[t.type]?.icon }} {{ t.tag }}
           <button class="tag-remove" @click="removeTag(t.id)">✕</button>
         </span>
       </div>
@@ -335,7 +380,7 @@ async function removeTag(tagId) {
     <!-- Tip -->
     <div class="tip-box">
       <div class="tip-left">
-        <span class="tip-icon">💡</span>
+        <span class="tip-icon"><img src="/icons/lightbulb.svg" alt="" class="tip-svg" /></span>
         <div>
           <span class="tip-title">Daily Tip</span>
           <p class="tip-text">{{ dailyTip }}</p>
@@ -389,7 +434,9 @@ async function removeTag(tagId) {
 }
 
 .streak-fire {
-  font-size: 1.5rem;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .streak-count {
@@ -412,6 +459,37 @@ async function removeTag(tagId) {
   grid-template-columns: 1fr 1.5fr;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+/* Inline SVG icons */
+.inline-icon {
+  width: 28px;
+  height: 28px;
+  vertical-align: -4px;
+  margin-left: 2px;
+}
+
+.section-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+
+.pi-svg {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: -2px;
+}
+
+.tip-svg {
+  width: 22px;
+  height: 22px;
 }
 
 /* Cards */
@@ -465,7 +543,6 @@ async function removeTag(tagId) {
 }
 
 .pi-icon {
-  font-size: 1.2rem;
   width: 38px;
   height: 38px;
   background: #f0fdf4;
@@ -596,7 +673,7 @@ async function removeTag(tagId) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
   padding: 10px;
   background: #22c55e;
   color: #ffffff;
@@ -611,6 +688,52 @@ async function removeTag(tagId) {
 .ask-ai-btn:hover {
   background: #16a34a;
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.meal-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.refresh-btn {
+  padding: 10px 16px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.refresh-btn:hover {
+  background: #e5e7eb;
+}
+
+.suggestions-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Quick actions */
@@ -868,7 +991,6 @@ async function removeTag(tagId) {
 }
 
 .tip-icon {
-  font-size: 1.3rem;
   flex-shrink: 0;
   margin-top: 2px;
 }

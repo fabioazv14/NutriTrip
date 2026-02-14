@@ -4,12 +4,22 @@ export const mealModel = {
   /**
    * Log a meal
    */
-  add(userId, mealType, note = null, imagePath = null) {
+  add(userId, { mealType, name = null, note = null, imagePath = null, calories = 0, protein = 0, carbs = 0, fat = 0 }) {
     const db = getDb()
-    const result = db.prepare(
-      'INSERT INTO meal_logs (user_id, meal_type, note, image_path) VALUES (?, ?, ?, ?)'
-    ).run(userId, mealType, note, imagePath)
-    return { id: result.lastInsertRowid, userId, mealType, note, imagePath }
+    const result = db.prepare(`
+      INSERT INTO meal_logs (user_id, meal_type, name, note, image_path, calories, protein, carbs, fat)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, mealType, name, note, imagePath, calories, protein, carbs, fat)
+
+    return this.getById(result.lastInsertRowid)
+  },
+
+  /**
+   * Get a meal by ID
+   */
+  getById(id) {
+    const db = getDb()
+    return db.prepare('SELECT * FROM meal_logs WHERE id = ?').get(id)
   },
 
   /**
