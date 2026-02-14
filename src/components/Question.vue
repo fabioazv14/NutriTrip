@@ -65,6 +65,7 @@ function nextQuestion() {
 
     finishing.value = true
     setTimeout(() => {
+      localStorage.setItem('hasCompletedQuestionnaire', 'true')
       router.push('/dashboard')
     }, 800)
   }

@@ -27,7 +27,8 @@ function handleRegister() {
 
   // TODO: add real registration logic
   console.log('Register:', name.value, email.value, password.value)
-  router.push('/login')
+  localStorage.setItem('isAuthenticated', 'true')
+  router.push('/dashboard')
 }
 </script>
 

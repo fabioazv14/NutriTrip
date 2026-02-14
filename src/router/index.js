@@ -14,6 +14,12 @@ const routes = [
     meta: { hideNavbar: true },
   },
   {
+    path: '/questionnaire',
+    name: 'Questionnaire',
+    component: () => import('../views/Questionnaire.vue'),
+    meta: { hideNavbar: true },
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue'),
@@ -45,6 +51,30 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+  const hasCompletedQuestionnaire = localStorage.getItem('hasCompletedQuestionnaire') === 'true'
+
+  // Restricted routes if not authenticated
+  const protectedRoutes = ['Dashboard', 'MealTracker', 'Chatbot', 'Questionnaire']
+  if (protectedRoutes.includes(to.name) && !isAuthenticated) {
+    return next('/login')
+  }
+
+  // Restricted routes if authenticated
+  if (isAuthenticated) {
+    if (to.name === 'Login' || to.name === 'Register' || to.name === 'Home') {
+      return next('/dashboard')
+    }
+    // Prevent re-taking questionnaire if already completed
+    if (to.name === 'Questionnaire' && hasCompletedQuestionnaire) {
+      return next('/dashboard')
+    }
+  }
+
+  next()
 })
 
 export default router

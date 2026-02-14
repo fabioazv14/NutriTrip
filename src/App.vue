@@ -12,6 +12,12 @@ function checkOnboarded() {
   isOnboarded.value = !!localStorage.getItem('nutritrip_profile')
 }
 
+function handleLogout() {
+  localStorage.removeItem('nutritrip_profile')
+  checkOnboarded()
+  router.push('/')
+}
+
 onMounted(checkOnboarded)
 watch(() => route.path, checkOnboarded)
 </script>
@@ -28,6 +34,9 @@ watch(() => route.path, checkOnboarded)
       <RouterLink to="/login" class="btn-login">Login</RouterLink>
       <RouterLink to="/register" class="btn-signup">Sign Up</RouterLink>
     </div>
+    <div v-else class="nav-right">
+       <button @click="handleLogout" class="btn-logout">Logout</button>
+    </div>
   </nav>
   <RouterView v-slot="{ Component }">
     <Transition name="page" mode="out-in">
@@ -37,6 +46,19 @@ watch(() => route.path, checkOnboarded)
 </template>
 
 <style scoped>
+.btn-logout {
+  background: none;
+  border: 1px solid #e5e7eb;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #374151;
+}
+.btn-logout:hover {
+  background: #f3f4f6;
+}
+
 nav {
   display: flex;
   align-items: center;

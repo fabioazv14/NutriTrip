@@ -11,7 +11,8 @@ const showPassword = ref(false)
 function handleLogin() {
   // TODO: add real authentication logic
   console.log('Login:', email.value, password.value)
-  router.push('/')
+  localStorage.setItem('isAuthenticated', 'true')
+  router.push('/dashboard')
 }
 </script>
 
