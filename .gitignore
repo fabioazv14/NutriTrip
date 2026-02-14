@@ -1,5 +1,5 @@
 #API Keys and environment variables
-*/.env
+*.env
 
 # Logs
 logs
