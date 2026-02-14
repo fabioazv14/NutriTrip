@@ -7,6 +7,7 @@ import { questions } from '@/data/questions'
 const router = useRouter()
 
 const currentIndex = ref(0)
+const gridIndex = ref([0])
 const answers = ref({})
 const answered = ref(false)
 const swiping = ref(false)
@@ -17,6 +18,7 @@ const direction = ref('forward') // 'forward' or 'back'
 const currentQuestion = computed(() => questions[currentIndex.value])
 const isLastQuestion = computed(() => currentIndex.value === questions.length - 1)
 const isFirstQuestion = computed(() => currentIndex.value === 0)
+const grid = computed(() => gridIndex.value.includes(currentIndex.value))
 const savedAnswer = computed(() => {
   const ans = answers.value[currentIndex.value]
   if (!ans) return null
@@ -61,7 +63,7 @@ function nextQuestion() {
       allergies: Array.isArray(answers.value[2]) ? answers.value[2] : (answers.value[2]?.value ? [answers.value[2].value] : null),
       budget: answers.value[3]?.value || null,
     }
-    localStorage.setItem('nutritrip_profile', JSON.stringify(profile))
+    localStorage.setItem('nutritrip_profile', JSON.stringify(profile)) // Onde armazena os dados do user
 
     finishing.value = true
     setTimeout(() => {
@@ -119,6 +121,7 @@ function prevQuestion() {
           :options="currentQuestion.options"
           :multiple="currentQuestion.multiple || false"
           :selected-value="savedAnswer"
+          :grid="grid"
           @select="handleAnswer"
         />
       </Transition>

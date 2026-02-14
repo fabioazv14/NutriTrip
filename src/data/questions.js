@@ -5,11 +5,13 @@ export const questions = [
       { label: 'Lose weight', value: 'lose' },
       { label: 'Maintain weight', value: 'maintain' },
       { label: 'Gain weight', value: 'gain' },
+      { label: 'Gain muscules', value: 'muscle' },
     ],
   },
   {
     question: "What is your diet?",
     options: [
+      { label: 'None', value: 'none' },
       { label: 'Vegetarian', value: 'vegetarian' },
       { label: 'Vegan', value: 'vegan' },
       { label: 'Gluten-Free', value: 'gluten-free' },
@@ -21,11 +23,13 @@ export const questions = [
     question: "Do you have any food allergies?",
     multiple: true,
     options: [
-      { label: 'No', value: 'no' },
+      { label: 'None', value: 'none' },
       { label: 'Dairy', value: 'dairy' },
       { label: 'Gluten', value: 'gluten' },
       { label: 'Nuts', value: 'nuts' },
       { label: 'Soy', value: 'soy' },
+      { label: 'Cinnamon', value: 'cinnamon' },
+      { label: 'Sea Food', value: 'sea' },
     ],
   },
   {
@@ -36,6 +40,15 @@ export const questions = [
       { label: '$30', value: '30' },
       { label: '$40', value: '40' },
       { label: '$50', value: '50' },
+    ],
+  },
+  {
+    question: "How much time are you willing to spend cooking?",
+    options: [
+      { label: '5-10 min', value: '1' },
+      { label: '10-20 min', value: '2' },
+      { label: '20-30 min', value: '3' },
+      { label: '30-60 min', value: '4' },
     ],
   }
 ]

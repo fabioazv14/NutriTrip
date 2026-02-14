@@ -14,6 +14,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Um booleano que verifica se a estrutura é grid ou não
+  grid:{
+    type: Boolean,
+    default: false,
+  },
   // For single: String | null, for multiple: Array | null
   selectedValue: {
     default: null,
@@ -31,6 +36,8 @@ const selectedMultiple = ref(
     ? [...props.selectedValue]
     : []
 )
+
+// vost isGrid = 
 
 watch(() => props.selectedValue, (val) => {
   if (props.multiple) {
@@ -68,7 +75,7 @@ function handleSelect(option) {
   <div class="question-card">
     <h2 class="question-text">{{ question }}</h2>
     <p v-if="multiple" class="hint">Select all that apply</p>
-    <div class="options">
+    <div class="options" :class="{'options-grid': !grid}">
       <button
         v-for="(option, index) in options"
         :key="index"
@@ -115,6 +122,12 @@ function handleSelect(option) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
 
 .option-btn {
