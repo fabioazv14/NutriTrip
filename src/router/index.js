@@ -14,12 +14,6 @@ const routes = [
     meta: { hideNavbar: true },
   },
   {
-    path: '/questionnaire',
-    name: 'Questionnaire',
-    component: () => import('../views/Questionnaire.vue'),
-    meta: { hideNavbar: true, requiresAuth: true },
-  },
-  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue'),
