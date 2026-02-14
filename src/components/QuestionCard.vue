@@ -56,18 +56,51 @@ function isActive(option) {
 
 function handleSelect(option) {
   if (props.multiple) {
-    const idx = selectedMultiple.value.indexOf(option.value)
-    if (idx === -1) {
-      selectedMultiple.value.push(option.value)
+    // Caso especial: se clicou em "none"
+    if (option.value === 'none') {
+      // Se "none" já está selecionado, remove tudo (deseleciona)
+      if (selectedMultiple.value.includes('none')) {
+        selectedMultiple.value = []
+      } else {
+        // Se clicou em "none", seleciona apenas "none" (remove os outros)
+        selectedMultiple.value = ['none']
+      }
     } else {
-      selectedMultiple.value.splice(idx, 1)
+      // Para outras opções: se "none" está selecionado, remove-o primeiro
+      if (selectedMultiple.value.includes('none')) {
+        // Remove "none" do array
+        const index = selectedMultiple.value.indexOf('none')
+        selectedMultiple.value.splice(index, 1)
+      }
+      
+      // Agora processa a opção normal
+      const idx = selectedMultiple.value.indexOf(option.value)
+      if (idx === -1) {
+        selectedMultiple.value.push(option.value)
+      } else {
+        selectedMultiple.value.splice(idx, 1)
+      }
     }
-    // Emit the full array of selected values
+    // Emit o array atualizado
     emit('select', [...selectedMultiple.value])
   } else {
+    // Single select (não muda)
     selected.value = option.value
     emit('select', option)
   }
+   // if (props.multiple) {
+  //   const idx = selectedMultiple.value.indexOf(option.value)
+  //   if (idx === -1) {
+  //     selectedMultiple.value.push(option.value)
+  //   } else {
+  //     selectedMultiple.value.splice(idx, 1)
+  //   }
+  //   // Emit the full array of selected values
+  //   emit('select', [...selectedMultiple.value])
+  // } else {
+  //   selected.value = option.value
+  //   emit('select', option)
+  // }
 }
 </script>
 
