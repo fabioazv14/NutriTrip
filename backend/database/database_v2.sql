@@ -257,3 +257,37 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+DELIMITER $$
+
+CREATE EVENT IF NOT EXISTS `ev_ajuste_inteligente_preferencias`
+ON SCHEDULE EVERY 1 DAY -- Analisa os hábitos diariamente
+STARTS (CURRENT_DATE + INTERVAL 1 DAY + INTERVAL 4 HOUR) -- Corre às 04:00
+DO
+BEGIN
+    
+    -- CENÁRIO 1: Adicionar preferências automáticas
+    -- Se o utilizador comeu >= 10 vezes algo que NÃO está nas suas preferências
+    INSERT IGNORE INTO `nutritrip`.`UtilizadorPreferenciasRefeicoes` (Utilizador, PreferenciasRefeicoes)
+    SELECT Utilizador, Tag
+    FROM `nutritrip`.`Refeicao`
+    WHERE Tag IS NOT NULL 
+      AND Data > DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+    GROUP BY Utilizador, Tag
+    HAVING COUNT(*) >= 10;
+
+    -- CENÁRIO 2: Remover preferências por desuso
+    -- Se o utilizador TEM a preferência, mas comeu < 3 vezes nos últimos 30 dias
+    DELETE FROM up
+    USING `nutritrip`.`UtilizadorPreferenciasRefeicoes` AS up
+    LEFT JOIN (
+        SELECT Utilizador, Tag, COUNT(*) as frequencia
+        FROM `nutritrip`.`Refeicao`
+        WHERE Data > DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+        GROUP BY Utilizador, Tag
+    ) AS habitos ON up.Utilizador = habitos.Utilizador AND up.PreferenciasRefeicoes = habitos.Tag
+    WHERE (habitos.frequencia IS NULL OR habitos.frequencia < 3);
+
+END$$
+
+DELIMITER ;
