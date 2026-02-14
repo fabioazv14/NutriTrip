@@ -235,9 +235,9 @@ ${userContext}
 
 IMPORTANT: Respond ONLY with valid JSON, no other text. Use this exact format:
 [
-  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "~XXX kcal", "emoji": "single food emoji"},
-  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "~XXX kcal", "emoji": "single food emoji"},
-  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "~XXX kcal", "emoji": "single food emoji"}
+  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "XXX kcal", "emoji": "single food emoji"},
+  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "XXX kcal", "emoji": "single food emoji"},
+  {"name": "Meal Name", "desc": "Short description (max 10 words)", "cal": "XXX kcal", "emoji": "single food emoji"}
 ]
 
 Rules:
