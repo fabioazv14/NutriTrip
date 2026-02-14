@@ -6,6 +6,8 @@ Input:  { "message": "...", "history": [...], "systemPrompt": "..." }
 Output: { "response": "..." }  or  { "error": "..." }
 """
 from openai import OpenAI
+# from google import genai
+# from google.genai import types
 import sys
 import os
 import json
@@ -20,7 +22,13 @@ if not MINHA_CHAVE:
     print(json.dumps({"error": "OPENAI_API_KEY not found in .env"}))
     sys.exit(1)
 
+# --- Gemini ---
+# client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# MODEL = "gemini-2.0-flash"
+
+# --- OpenAI ---
 client = OpenAI(api_key=MINHA_CHAVE)
+MODEL = "gpt-4o-mini"
 
 
 def chat(data):
@@ -31,25 +39,38 @@ def chat(data):
     if not message:
         return {"error": "Message is required"}
 
-    # Build messages list
+    # --- OpenAI format ---
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
-
-    # Add conversation history
     messages.extend(history)
-
-    # Add current user message
     messages.append({"role": "user", "content": message})
 
     try:
         response = client.chat.completions.create(
-            model="gpt-5-chat-latest",
-            messages=messages
+            model=MODEL,
+            messages=messages,
         )
-
         resposta = response.choices[0].message.content
         return {"response": resposta}
+
+    # --- Gemini format ---
+    # contents = []
+    # for msg in history:
+    #     role = "user" if msg["role"] == "user" else "model"
+    #     contents.append(types.Content(role=role, parts=[types.Part(text=msg["content"])]))
+    # contents.append(types.Content(role="user", parts=[types.Part(text=message)]))
+    # try:
+    #     config = types.GenerateContentConfig(
+    #         system_instruction=system_prompt if system_prompt else None,
+    #     )
+    #     response = client.models.generate_content(
+    #         model=MODEL,
+    #         contents=contents,
+    #         config=config,
+    #     )
+    #     resposta = response.text
+    #     return {"response": resposta}
 
     except Exception as e:
         return {"error": str(e)}

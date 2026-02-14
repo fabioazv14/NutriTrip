@@ -19,6 +19,13 @@ This template should help get you started developing with Vue 3 in Vite.
 
 See [Vite Configuration Reference](https://vite.dev/config/).
 
+## Virtual Environment Setup
+
+```sh
+npm run setup:python
+```
+*create .env file with OPENAI_API_KEY=your_api_key_here in backend/ia directory*
+
 ## Project Setup
 
 ```sh
