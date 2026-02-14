@@ -46,19 +46,19 @@ const dailyTip = computed(() => {
 // AI meal suggestion based on profile goal (fallback)
 const fallbackSuggestions = {
   lose: [
-    { name: 'Grilled Chicken Salad', desc: 'High protein, low calorie lunch option', cal: '~380 kcal', emoji: '🥗' },
-    { name: 'Greek Yogurt Bowl', desc: 'With berries and a drizzle of honey', cal: '~250 kcal', emoji: '🫐' },
-    { name: 'Veggie Stir-Fry', desc: 'Loaded with colorful vegetables', cal: '~320 kcal', emoji: '🥦' },
+    { name: 'Grilled Chicken Salad', desc: 'High protein, low calorie lunch option', cal: '380 kcal', emoji: '🥗' },
+    { name: 'Greek Yogurt Bowl', desc: 'With berries and a drizzle of honey', cal: '250 kcal', emoji: '🫐' },
+    { name: 'Veggie Stir-Fry', desc: 'Loaded with colorful vegetables', cal: '320 kcal', emoji: '🥦' },
   ],
   gain: [
-    { name: 'Peanut Butter Smoothie', desc: 'Banana, oats, PB, and whole milk', cal: '~650 kcal', emoji: '🥜' },
-    { name: 'Pasta with Chicken', desc: 'Whole wheat pasta, grilled chicken, olive oil', cal: '~720 kcal', emoji: '🍝' },
-    { name: 'Avocado Toast & Eggs', desc: 'Sourdough, 2 eggs, half avocado', cal: '~520 kcal', emoji: '🥑' },
+    { name: 'Peanut Butter Smoothie', desc: 'Banana, oats, PB, and whole milk', cal: '650 kcal', emoji: '🥜' },
+    { name: 'Pasta with Chicken', desc: 'Whole wheat pasta, grilled chicken, olive oil', cal: '720 kcal', emoji: '🍝' },
+    { name: 'Avocado Toast & Eggs', desc: 'Sourdough, 2 eggs, half avocado', cal: '520 kcal', emoji: '🥑' },
   ],
   maintain: [
-    { name: 'Salmon & Rice Bowl', desc: 'Balanced macro meal with greens', cal: '~480 kcal', emoji: '🍣' },
-    { name: 'Chicken Wrap', desc: 'Whole wheat wrap with veggies', cal: '~420 kcal', emoji: '🌯' },
-    { name: 'Quinoa Power Bowl', desc: 'Quinoa, black beans, corn, salsa', cal: '~450 kcal', emoji: '🥙' },
+    { name: 'Salmon & Rice Bowl', desc: 'Balanced macro meal with greens', cal: '480 kcal', emoji: '🍣' },
+    { name: 'Chicken Wrap', desc: 'Whole wheat wrap with veggies', cal: '420 kcal', emoji: '🌯' },
+    { name: 'Quinoa Power Bowl', desc: 'Quinoa, black beans, corn, salsa', cal: '450 kcal', emoji: '🥙' },
   ],
 }
 
