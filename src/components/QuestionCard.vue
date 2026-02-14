@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   question: {
@@ -10,26 +10,70 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  multiple: {
+    type: Boolean,
+    default: false,
+  },
+  // For single: String | null, for multiple: Array | null
+  selectedValue: {
+    default: null,
+  },
 })
 
 const emit = defineEmits(['select'])
-const selected = ref(null)
+
+// Single select
+const selected = ref(props.multiple ? null : props.selectedValue)
+
+// Multiple select
+const selectedMultiple = ref(
+  props.multiple && Array.isArray(props.selectedValue)
+    ? [...props.selectedValue]
+    : []
+)
+
+watch(() => props.selectedValue, (val) => {
+  if (props.multiple) {
+    selectedMultiple.value = Array.isArray(val) ? [...val] : []
+  } else {
+    selected.value = val
+  }
+})
+
+function isActive(option) {
+  if (props.multiple) {
+    return selectedMultiple.value.includes(option.value)
+  }
+  return selected.value === option.value
+}
 
 function handleSelect(option) {
-  selected.value = option.value
-  emit('select', option)
+  if (props.multiple) {
+    const idx = selectedMultiple.value.indexOf(option.value)
+    if (idx === -1) {
+      selectedMultiple.value.push(option.value)
+    } else {
+      selectedMultiple.value.splice(idx, 1)
+    }
+    // Emit the full array of selected values
+    emit('select', [...selectedMultiple.value])
+  } else {
+    selected.value = option.value
+    emit('select', option)
+  }
 }
 </script>
 
 <template>
   <div class="question-card">
     <h2 class="question-text">{{ question }}</h2>
+    <p v-if="multiple" class="hint">Select all that apply</p>
     <div class="options">
       <button
         v-for="(option, index) in options"
         :key="index"
         class="option-btn"
-        :class="{ active: selected === option.value }"
+        :class="{ active: isActive(option) }"
         @click="handleSelect(option)"
       >
         {{ option.label }}
@@ -53,8 +97,18 @@ function handleSelect(option) {
   font-size: 1.4rem;
   font-weight: 700;
   color: #111827;
-  margin-bottom: 32px;
+  margin-bottom: 8px;
   line-height: 1.4;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.question-card:not(:has(.hint)) .question-text {
+  margin-bottom: 32px;
 }
 
 .options {

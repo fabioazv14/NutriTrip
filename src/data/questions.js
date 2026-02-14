@@ -19,6 +19,7 @@ export const questions = [
   },
   {
     question: "Do you have any food allergies?",
+    multiple: true,
     options: [
       { label: 'No', value: 'no' },
       { label: 'Dairy', value: 'dairy' },
