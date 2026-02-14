@@ -25,7 +25,7 @@ const today = computed(() => {
 
 // Goal display
 const goalLabels = { lose: 'Lose weight', maintain: 'Maintain weight', gain: 'Gain weight' }
-const goalIcons = { lose: '/icons/flame.svg', maintain: '/icons/scale.svg', gain: '/icons/muscle.svg' }
+const goalIcons = { lose: '/weight-loss.png', maintain: '/scale.png', gain: '/weight-gain.png' }
 
 // Diet display
 const dietLabels = {
@@ -236,7 +236,7 @@ async function removeTag(tagId) {
           </div>
           <div class="profile-item">
             <span class="pi-icon">
-              <img src="/icons/diet.svg" alt="" class="pi-svg" />
+              <img src="/broccoli.png" alt="" class="pi-svg" />
             </span>
             <div>
               <span class="pi-label">Diet</span>
@@ -313,7 +313,7 @@ async function removeTag(tagId) {
 
       <button class="qa-btn" @click="router.push('/chatbot')">
         <div class="qa-icon qa-ai">
-          <img src="/pan-food.png" alt="" />
+          <img src="/user-robot.png" alt="" />
         </div>
         <div class="qa-text">
           <span class="qa-title">Ask NutriTrip AI</span>

@@ -637,7 +637,6 @@ async function removeMeal(id) {
   height: 48px;
   display: block;
   margin: 0 auto 12px;
-  opacity: 0.5;
 }
 
 .drop-text {

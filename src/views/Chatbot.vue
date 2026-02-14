@@ -22,7 +22,7 @@ const userProfile = computed(() => {
 onMounted(() => {
   messages.value.push({
     role: 'assistant',
-    content: 'Hey! 👋 I\'m your NutriTrip nutrition assistant. Ask me anything about nutrition, meal planning, healthy eating, or food ideas for your trips!',
+    content: 'Hey! 👋 I\'m your NutriTrip nutrition assistant. Ask me anything about nutrition, meal planning, healthy eating, or food ideas!',
     time: formatTime(),
   })
   inputRef.value?.focus()

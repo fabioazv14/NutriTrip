@@ -48,19 +48,19 @@ function getStarted() {
       <div class="hero-visual">
         <div class="feature-cards">
           <div class="fcard fcard-1">
-            <div class="fcard-icon">📸</div>
+            <div class="fcard-icon"><img src="/icons/camera.svg" alt="Camera Icon" /></div>
             <span>Snap your meals</span>
           </div>
           <div class="fcard fcard-2">
-            <div class="fcard-icon">🤖</div>
+            <div class="fcard-icon"><img src="/user-robot.png" alt="Robot Icon" /></div>
             <span>AI nutrition advice</span>
           </div>
           <div class="fcard fcard-3">
-            <div class="fcard-icon">💧</div>
-            <span>Track hydration</span>
+            <div class="fcard-icon"><img src="/pan-food.png" alt="Food Icon" /></div>
+            <span>Meals ideas</span>
           </div>
           <div class="fcard fcard-4">
-            <div class="fcard-icon">🎯</div>
+            <div class="fcard-icon"><img src="/icons/target.svg" alt="Target Icon" /></div>
             <span>Reach your goals</span>
           </div>
         </div>
@@ -78,7 +78,7 @@ function getStarted() {
       </div>
       <div class="feature">
         <div class="feature-icon ai-icon">
-          <img src="/icons/meal-tracker.svg" alt="" />
+          <img src="/pan-food.png" alt="" />
         </div>
         <h3>AI Chatbot</h3>
         <p>Ask our AI assistant for meal ideas, nutrition tips, and personalized recommendations.</p>
@@ -281,6 +281,10 @@ function getStarted() {
   text-align: center;
   transition: all 0.3s;
   animation: floatIn 0.6s ease backwards;
+}
+.fcard img {
+  width: 28px;
+  height: 28px;
 }
 
 .fcard:hover {

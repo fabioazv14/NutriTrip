@@ -31,11 +31,11 @@ export const questions = [
   {
     question: "How much are you willing to spend on food per day?",
     options: [
-      { label: '$10', value: '10' },
-      { label: '$20', value: '20' },
-      { label: '$30', value: '30' },
-      { label: '$40', value: '40' },
-      { label: '$50', value: '50' },
+      { label: '$1-$9.99', value: '1-10' },
+      { label: '$10-$19.99', value: '10-20' },
+      { label: '$20-$29.99', value: '20-30' },
+      { label: '$30-$39.99', value: '30-40' },
+      { label: '$40-$49.99', value: '40-50' },
     ],
   }
 ]
