@@ -6,7 +6,7 @@ export const aiController = {
    */
   async chat(req, res, next) {
     try {
-      const { message, sessionId, userProfile, userId } = req.body
+      const { message, sessionId, userProfile } = req.body
 
       if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message is required' })
@@ -16,7 +16,25 @@ export const aiController = {
         return res.status(400).json({ error: 'Session ID is required' })
       }
 
-      const result = await aiService.chat(sessionId, message.trim(), userProfile, userId || null)
+      const result = await aiService.chat(sessionId, message.trim(), userProfile)
+      res.json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  /**
+   * POST /api/ai/scan-meal
+   */
+  async scanMeal(req, res, next) {
+    try {
+      const { image, mealType } = req.body
+
+      if (!image) {
+        return res.status(400).json({ error: 'Image is required' })
+      }
+
+      const result = await aiService.scanMeal(image, mealType || 'meal')
       res.json(result)
     } catch (error) {
       next(error)

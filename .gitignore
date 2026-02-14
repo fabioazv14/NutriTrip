@@ -1,5 +1,5 @@
 #API Keys and environment variables
-*.env
+*/.env
 
 # Logs
 logs
@@ -46,3 +46,8 @@ __screenshots__/
 **/__pycache__/
 *.pyc
 backend/ia/.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal

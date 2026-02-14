@@ -14,11 +14,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // Um booleano que verifica se a estrutura é grid ou não
-  grid:{
-    type: Boolean,
-    default: false,
-  },
   // For single: String | null, for multiple: Array | null
   selectedValue: {
     default: null,
@@ -37,8 +32,6 @@ const selectedMultiple = ref(
     : []
 )
 
-// vost isGrid = 
-
 watch(() => props.selectedValue, (val) => {
   if (props.multiple) {
     selectedMultiple.value = Array.isArray(val) ? [...val] : []
@@ -56,51 +49,18 @@ function isActive(option) {
 
 function handleSelect(option) {
   if (props.multiple) {
-    // Caso especial: se clicou em "none"
-    if (option.value === 'none') {
-      // Se "none" já está selecionado, remove tudo (deseleciona)
-      if (selectedMultiple.value.includes('none')) {
-        selectedMultiple.value = []
-      } else {
-        // Se clicou em "none", seleciona apenas "none" (remove os outros)
-        selectedMultiple.value = ['none']
-      }
+    const idx = selectedMultiple.value.indexOf(option.value)
+    if (idx === -1) {
+      selectedMultiple.value.push(option.value)
     } else {
-      // Para outras opções: se "none" está selecionado, remove-o primeiro
-      if (selectedMultiple.value.includes('none')) {
-        // Remove "none" do array
-        const index = selectedMultiple.value.indexOf('none')
-        selectedMultiple.value.splice(index, 1)
-      }
-      
-      // Agora processa a opção normal
-      const idx = selectedMultiple.value.indexOf(option.value)
-      if (idx === -1) {
-        selectedMultiple.value.push(option.value)
-      } else {
-        selectedMultiple.value.splice(idx, 1)
-      }
+      selectedMultiple.value.splice(idx, 1)
     }
-    // Emit o array atualizado
+    // Emit the full array of selected values
     emit('select', [...selectedMultiple.value])
   } else {
-    // Single select (não muda)
     selected.value = option.value
     emit('select', option)
   }
-   // if (props.multiple) {
-  //   const idx = selectedMultiple.value.indexOf(option.value)
-  //   if (idx === -1) {
-  //     selectedMultiple.value.push(option.value)
-  //   } else {
-  //     selectedMultiple.value.splice(idx, 1)
-  //   }
-  //   // Emit the full array of selected values
-  //   emit('select', [...selectedMultiple.value])
-  // } else {
-  //   selected.value = option.value
-  //   emit('select', option)
-  // }
 }
 </script>
 
@@ -108,7 +68,7 @@ function handleSelect(option) {
   <div class="question-card">
     <h2 class="question-text">{{ question }}</h2>
     <p v-if="multiple" class="hint">Select all that apply</p>
-    <div class="options" :class="{'options-grid': !grid}">
+    <div class="options">
       <button
         v-for="(option, index) in options"
         :key="index"
@@ -155,12 +115,6 @@ function handleSelect(option) {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.options-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
 }
 
 .option-btn {
