@@ -6,6 +6,7 @@ import { SYSTEM_PROMPT, buildUserContext } from '../utils/prompts.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const PYTHON_SCRIPT = join(__dirname, '..', 'ia', 'ia_api.py')
+const PYTHON_BIN = join(__dirname, '..', 'ia', 'venv', 'bin', 'python3')
 
 // In-memory conversation store (per session)
 const conversations = new Map()
@@ -16,7 +17,7 @@ const MAX_HISTORY = 20
  */
 function callPython(inputData) {
   return new Promise((resolve, reject) => {
-    const py = spawn('python3', [PYTHON_SCRIPT], {
+    const py = spawn(PYTHON_BIN, [PYTHON_SCRIPT], {
       cwd: join(__dirname, '..', 'ia'),
     })
 
