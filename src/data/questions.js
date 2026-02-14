@@ -10,10 +10,18 @@ export const questions = [
   },
   {
     question: "What is your sex?",
-    switch: true,
+    switching: true,
     options: [
       { label: 'Male', value: 'male' },
       { label: 'Female', value: 'female' },
+    ],
+  },
+  {
+    question: "What is your gender?",
+    options: [
+      { label: 'Male', value: 'male' },
+      { label: 'Female', value: 'female' },
+      { label: 'No Binary', value: 'no_bi' },
     ],
   },
   {

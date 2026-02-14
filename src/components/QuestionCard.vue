@@ -14,7 +14,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  switch: { // Serve para ver se a próxima pergunta é na mesma "QuestionCard" (de grosso modo)
+  switching: { // Serve para ver se a próxima pergunta é na mesma "QuestionCard" (de grosso modo)
       type: Boolean,
       default: false,
   },
@@ -28,7 +28,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select','select2'])
 
 // Single select
 const selected = ref(props.multiple ? null : props.selectedValue)
@@ -84,12 +84,13 @@ function handleSelect(option) {
     // Emit o array atualizado
     emit('select', [...selectedMultiple.value])
   } else {
-    if(props.switch){
-         
-    }
+    if(props.switching){
+      emit('select2',option)
+    }else{
     // Single select (não muda)
     selected.value = option.value
     emit('select', option)
+    }
   }
 }
 </script>
