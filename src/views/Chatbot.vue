@@ -128,7 +128,7 @@ function useSuggestion(text) {
     <div class="chat-header">
       <div class="header-left">
         <div class="ai-avatar">
-          <img src="/icons/meal-tracker.svg" alt="" />
+          <img src="/nutritrip.png" alt="" />
         </div>
         <div>
           <h1>NutriTrip AI</h1>
@@ -172,7 +172,7 @@ function useSuggestion(text) {
         :class="[msg.role, { error: msg.isError }]"
       >
         <div v-if="msg.role === 'assistant'" class="msg-avatar">
-          <img src="/icons/meal-tracker.svg" alt="" />
+          <img src="/nutritrip.png" alt="" />
         </div>
         <div class="msg-bubble">
           <div class="msg-content" v-html="formatMessage(msg.content)"></div>
@@ -183,7 +183,7 @@ function useSuggestion(text) {
       <!-- Typing indicator -->
       <div v-if="isLoading" class="message assistant">
         <div class="msg-avatar">
-          <img src="/icons/meal-tracker.svg" alt="" />
+          <img src="/nutritrip.png" alt="" />
         </div>
         <div class="msg-bubble typing">
           <span class="dot"></span>
@@ -262,8 +262,8 @@ function useSuggestion(text) {
 }
 
 .ai-avatar img {
-  width: 22px;
-  height: 22px;
+  width: 40px;
+  height: 40px;
 }
 
 .chat-header h1 {
@@ -391,8 +391,8 @@ function useSuggestion(text) {
 }
 
 .msg-avatar img {
-  width: 18px;
-  height: 18px;
+  width: 34px;
+  height: 34px;
 }
 
 .msg-bubble {
