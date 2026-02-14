@@ -16,6 +16,31 @@ const scanResult = ref(null)
 const scanError = ref(null)
 const isSaving = ref(false)
 const isLoading = ref(false)
+const newItem = ref('')
+
+function addItem() {
+  if (newItem.value.trim() && scanResult.value) {
+    if (!scanResult.value.items) scanResult.value.items = []
+    scanResult.value.items.push(newItem.value.trim())
+    newItem.value = ''
+  }
+}
+
+function removeItem(index) {
+  if (scanResult.value && scanResult.value.items) {
+    scanResult.value.items.splice(index, 1)
+  }
+}
+
+function cycleConfidence() {
+  if (!scanResult.value) return
+  const levels = ['low', 'medium', 'high']
+  const current = scanResult.value.confidence || 'medium'
+  const index = levels.indexOf(current.toLowerCase())
+  const next = levels[(index + 1) % levels.length]
+  scanResult.value.confidence = next
+}
+
 
 const mealTypes = [
   { label: 'Breakfast', value: 'breakfast', icon: '/icons/breakfast.svg' },
@@ -90,6 +115,7 @@ function closeUpload() {
   scanResult.value = null
   scanError.value = null
   isScanning.value = false
+  newItem.value = ''
 }
 
 function onFileSelect(event) {
@@ -239,7 +265,7 @@ async function removeMeal(id) {
 
     <!-- Upload modal -->
     <Transition name="modal">
-      <div v-if="showUpload" class="modal-overlay" @click.self="closeUpload">
+      <div v-if="showUpload" class="modal-overlay">
         <div class="modal-card">
           <button class="modal-close" @click="closeUpload">✕</button>
           <h2>Add Meal</h2>
@@ -305,59 +331,85 @@ async function removeMeal(id) {
             <!-- Scan results -->
             <div v-else-if="scanResult" class="scan-results">
               <div class="scan-header">
-                <h3 class="scan-meal-name">{{ scanResult.name }}</h3>
-                <span v-if="scanResult.confidence" class="confidence-badge" :class="scanResult.confidence">
+                <input v-model="scanResult.name" class="scan-meal-name-input" placeholder="Meal name" />
+                <button
+                  v-if="scanResult.confidence"
+                  class="confidence-badge btn-badge"
+                  :class="scanResult.confidence"
+                  @click="cycleConfidence"
+                  title="Change confidence level"
+                >
                   {{ scanResult.confidence }}
-                </span>
+                  <span class="badge-icon">⟳</span>
+                </button>
               </div>
               <p v-if="scanResult.description" class="scan-description">{{ scanResult.description }}</p>
+              
+              <div v-if="scanResult.description" class="scan-divider"></div>
 
               <!-- Items detected -->
-              <div v-if="scanResult.items && scanResult.items.length" class="scan-items">
-                <span v-for="(item, i) in scanResult.items" :key="i" class="item-tag">{{ item }}</span>
+              <div class="scan-items-wrapper">
+                <div v-if="scanResult.items && scanResult.items.length" class="scan-items">
+                  <span v-for="(item, i) in scanResult.items" :key="i" class="item-tag">
+                    {{ item }}
+                    <button class="remove-item-btn" @click="removeItem(i)">×</button>
+                  </span>
+                </div>
+                <div class="add-item-row">
+                  <input
+                    v-model="newItem"
+                    type="text"
+                    class="add-item-input"
+                    placeholder="Add item..."
+                    @keydown.enter.prevent="addItem"
+                  />
+                  <button class="add-item-btn" @click="addItem">+</button>
+                </div>
               </div>
+
+              <div class="scan-divider"></div>
 
               <!-- Macro bars -->
               <div class="macro-grid">
                 <div class="macro-item calories">
                   <div class="macro-top">
                     <span class="macro-label">Calories</span>
-                    <span class="macro-value">{{ scanResult.calories }}</span>
+                    <div class="macro-input-group">
+                      <input v-model.number="scanResult.calories" type="number" class="macro-input" />
+                      <span class="unit">kcal</span>
+                    </div>
                   </div>
-                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.calories / 800) * 100) + '%' }"></div></div>
                 </div>
                 <div class="macro-item protein">
                   <div class="macro-top">
                     <span class="macro-label">Protein</span>
-                    <span class="macro-value">{{ scanResult.protein }}g</span>
+                    <div class="macro-input-group">
+                      <input v-model.number="scanResult.protein" type="number" class="macro-input" />
+                      <span class="unit">g</span>
+                    </div>
                   </div>
-                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.protein / 50) * 100) + '%' }"></div></div>
                 </div>
                 <div class="macro-item carbs">
                   <div class="macro-top">
                     <span class="macro-label">Carbs</span>
-                    <span class="macro-value">{{ scanResult.carbs }}g</span>
+                    <div class="macro-input-group">
+                      <input v-model.number="scanResult.carbs" type="number" class="macro-input" />
+                      <span class="unit">g</span>
+                    </div>
                   </div>
-                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.carbs / 100) * 100) + '%' }"></div></div>
                 </div>
                 <div class="macro-item fat">
                   <div class="macro-top">
                     <span class="macro-label">Fat</span>
-                    <span class="macro-value">{{ scanResult.fat }}g</span>
+                    <div class="macro-input-group">
+                      <input v-model.number="scanResult.fat" type="number" class="macro-input" />
+                      <span class="unit">g</span>
+                    </div>
                   </div>
-                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.fat / 65) * 100) + '%' }"></div></div>
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- Note -->
-          <input
-            v-model="mealNote"
-            type="text"
-            class="meal-note"
-            placeholder="Add a note (optional)..."
-          />
 
           <!-- Save -->
           <button
@@ -938,11 +990,69 @@ async function removeMeal(id) {
   margin-bottom: 6px;
 }
 
+.scan-meal-name-input {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  width: 100%;
+  margin-right: 8px;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.scan-meal-name-input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #22c55e;
+  border-style: solid;
+}
+
+.scan-meal-name-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
 .scan-meal-name {
   font-size: 1rem;
   font-weight: 700;
   color: #111827;
   margin: 0;
+}
+
+.macro-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.macro-input {
+  width: 48px;
+  padding: 2px 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: right;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.macro-item.calories .macro-input { color: #f59e0b; }
+.macro-item.protein .macro-input { color: #3b82f6; }
+.macro-item.carbs .macro-input { color: #8b5cf6; }
+.macro-item.fat .macro-input { color: #ef4444; }
+
+.macro-input:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+.unit {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
 }
 
 .confidence-badge {
@@ -951,6 +1061,26 @@ async function removeMeal(id) {
   padding: 3px 10px;
   border-radius: 20px;
   text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-badge {
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-badge:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.badge-icon {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  font-weight: 700;
 }
 
 .confidence-badge.high {
@@ -975,21 +1105,89 @@ async function removeMeal(id) {
   line-height: 1.4;
 }
 
+.scan-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.scan-items-wrapper {
+  margin-bottom: 12px;
+}
+
 .scan-items {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .item-tag {
   font-size: 0.72rem;
   font-weight: 500;
-  padding: 3px 10px;
+  padding: 3px 6px 3px 10px;
   background: #f0fdf4;
   color: #166534;
   border-radius: 20px;
   border: 1px solid #bbf7d0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.remove-item-btn {
+  background: none;
+  border: none;
+  color: #166534;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  border-radius: 50%;
+}
+
+.remove-item-btn:hover {
+  opacity: 1;
+  background: rgba(22, 101, 52, 0.1);
+}
+
+.add-item-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-item-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  background: #fff;
+  color: #111827;
+}
+
+.add-item-input:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+.add-item-btn {
+  padding: 6px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-item-btn:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
 }
 
 /* Macro grid */
