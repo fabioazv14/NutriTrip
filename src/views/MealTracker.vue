@@ -204,7 +204,7 @@ async function removeMeal(id) {
     <!-- Header -->
     <div class="tracker-header">
       <div>
-        <h1><img src="/icons/meal-tracker.svg" alt="" class="header-icon" /> Meal Tracker</h1>
+        <h1><img src="/pan-food.png" alt="" class="header-icon" /> Meal Tracker</h1>
         <p class="subtitle">Track your meals by snapping a photo</p>
       </div>
       <div class="stats">

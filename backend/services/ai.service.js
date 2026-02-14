@@ -235,8 +235,9 @@ IMPORTANT: Respond ONLY with valid JSON, no other text. Use this exact format:
 ]
 
 Rules:
+- NEVER suggest meals containing any of the user's allergens — this is critical for their safety
 - Avoid suggesting meals the user already ate today
-- Respect allergies, dislikes and dietary restrictions
+- Respect dislikes and dietary restrictions
 - Match the user's goal (${userProfile?.goal || 'maintain'})
 - Suggest variety from recent meals
 - Keep descriptions concise`

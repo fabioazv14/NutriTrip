@@ -77,7 +77,7 @@ const suggestedMeals = computed(() => {
 const mealTimeConfig = {
   breakfast: { label: 'Breakfast ideas', icon: '/icons/sunrise.svg' },
   lunch: { label: 'Lunch ideas', icon: '/icons/sun.svg' },
-  snack: { label: 'Snack ideas', icon: '/icons/snack.svg' },
+  snack: { label: 'Snack ideas', icon: '/sandwich.png' },
   dinner: { label: 'Dinner ideas', icon: '/icons/moon.svg' },
 }
 
@@ -313,7 +313,7 @@ async function removeTag(tagId) {
 
       <button class="qa-btn" @click="router.push('/chatbot')">
         <div class="qa-icon qa-ai">
-          <img src="/icons/meal-tracker.svg" alt="" />
+          <img src="/pan-food.png" alt="" />
         </div>
         <div class="qa-text">
           <span class="qa-title">Ask NutriTrip AI</span>

@@ -12,9 +12,15 @@ Guidelines:
 - When suggesting meals, consider the user's profile (goal, diet, allergies, budget) if provided.
 - If you don't know something, say so honestly.
 - Format responses with clear structure when helpful (use bullet points, bold, etc).
-- Always prioritize food safety — warn about allergens when relevant.
 - You can use emojis sparingly to be friendly.
 - Respond in the same language the user writes in.
+
+CRITICAL — ALLERGY SAFETY:
+- NEVER suggest, recommend, or include foods that contain the user's listed allergens, not even as optional ingredients.
+- If the user asks about a food that contains one of their allergens, ALWAYS warn them clearly and prominently.
+- When suggesting recipes or meals, double-check every ingredient against the user's allergy list.
+- If unsure whether a food contains an allergen, err on the side of caution and warn the user.
+- Treat both profile allergies AND learned allergy tags with equal importance.
 
 You are NOT a doctor. Always recommend consulting a healthcare professional for medical nutrition advice.`
 
@@ -37,15 +43,31 @@ Rules for tags:
 export function buildUserContext(profile, tagsSummary = '', mealsSummary = '') {
   const parts = []
 
+  // Collect all allergy sources
+  const allAllergies = new Set()
+
   if (profile) {
     if (profile.goal) parts.push(`Goal: ${profile.goal}`)
     if (profile.diet) parts.push(`Diet: ${Array.isArray(profile.diet) ? profile.diet.join(', ') : profile.diet}`)
-    if (profile.allergies) parts.push(`Allergies: ${Array.isArray(profile.allergies) ? profile.allergies.join(', ') : profile.allergies}`)
+    if (profile.allergies) {
+      const allergies = Array.isArray(profile.allergies) ? profile.allergies : [profile.allergies]
+      allergies.filter(a => a && a !== 'no').forEach(a => allAllergies.add(a.toLowerCase()))
+    }
     if (profile.budget) parts.push(`Daily food budget: $${profile.budget}`)
   }
 
+  // Extract allergy tags from tagsSummary
   if (tagsSummary) {
+    const allergyMatch = tagsSummary.match(/Allergies:\s*(.+)/i)
+    if (allergyMatch) {
+      allergyMatch[1].split(',').map(a => a.trim().toLowerCase()).filter(Boolean).forEach(a => allAllergies.add(a))
+    }
     parts.push(`\nLearned preferences:\n${tagsSummary}`)
+  }
+
+  // Add prominent allergy warning at the top
+  if (allAllergies.size > 0) {
+    parts.unshift(`⚠️ ALLERGIES (NEVER include these): ${[...allAllergies].join(', ')}`)
   }
 
   if (mealsSummary) {
