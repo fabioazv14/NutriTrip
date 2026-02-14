@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "dev:backend": "node --watch backend/server.js",
-    "dev:all": "npm run dev:backend & npm run dev",
+    "dev:all": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:python": "python3 -m venv backend/ia/venv && backend/ia/venv/bin/pip install -r backend/ia/requirements.txt",
+    "postinstall": "echo '\\n📦 Run \\\"npm run setup:python\\\" to install Python dependencies\\n'"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.3",
+    "concurrently": "^9.2.1",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.5"
   },
