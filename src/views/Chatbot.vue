@@ -227,7 +227,7 @@ function useSuggestion(text) {
 
 <style scoped>
 .chatbot-page {
-  height: 100vh;
+  height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
   background: #f8faf8;

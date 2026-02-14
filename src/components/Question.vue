@@ -54,6 +54,15 @@ function nextQuestion() {
       swiping.value = false
     }, 400)
   } else {
+    // Save profile to localStorage before navigating
+    const profile = {
+      goal: answers.value[0]?.value || null,
+      diet: Array.isArray(answers.value[1]) ? answers.value[1] : (answers.value[1]?.value ? [answers.value[1].value] : null),
+      allergies: Array.isArray(answers.value[2]) ? answers.value[2] : (answers.value[2]?.value ? [answers.value[2].value] : null),
+      budget: answers.value[3]?.value || null,
+    }
+    localStorage.setItem('nutritrip_profile', JSON.stringify(profile))
+
     finishing.value = true
     setTimeout(() => {
       router.push('/dashboard')
