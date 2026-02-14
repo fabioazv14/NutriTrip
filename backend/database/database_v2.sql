@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS `nutritrip`.`Utilizador` (
   `Dob` DATE NOT NULL,
   `Genero` ENUM('M', 'F', 'O') NOT NULL,
   `UltimoPeriodo` DATE NULL,
+  `DiaInicio` ENUM('Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo') NULL,
   PRIMARY KEY (`Id`))
 ENGINE = InnoDB;
 
