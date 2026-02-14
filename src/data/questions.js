@@ -9,6 +9,14 @@ export const questions = [
     ],
   },
   {
+    question: "What is your sex?",
+    switch: true,
+    options: [
+      { label: 'Male', value: 'male' },
+      { label: 'Female', value: 'female' },
+    ],
+  },
+  {
     question: "What is your diet?",
     options: [
       { label: 'None', value: 'none' },

@@ -14,7 +14,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // Um booleano que verifica se a estrutura é grid ou não
+  switch: { // Serve para ver se a próxima pergunta é na mesma "QuestionCard" (de grosso modo)
+      type: Boolean,
+      default: false,
+  },
   grid:{
     type: Boolean,
     default: false,
@@ -56,19 +59,16 @@ function isActive(option) {
 
 function handleSelect(option) {
   if (props.multiple) {
-    // Caso especial: se clicou em "none"
+    //Se a opção for 'none'
     if (option.value === 'none') {
-      // Se "none" já está selecionado, remove tudo (deseleciona)
-      if (selectedMultiple.value.includes('none')) {
+      if (selectedMultiple.value.includes('none')) { // Limpa o array de escolhas se o 'none' for adicionado
         selectedMultiple.value = []
       } else {
-        // Se clicou em "none", seleciona apenas "none" (remove os outros)
         selectedMultiple.value = ['none']
       }
+    // Se não for 'none'
     } else {
-      // Para outras opções: se "none" está selecionado, remove-o primeiro
       if (selectedMultiple.value.includes('none')) {
-        // Remove "none" do array
         const index = selectedMultiple.value.indexOf('none')
         selectedMultiple.value.splice(index, 1)
       }
@@ -84,23 +84,13 @@ function handleSelect(option) {
     // Emit o array atualizado
     emit('select', [...selectedMultiple.value])
   } else {
+    if(props.switch){
+         
+    }
     // Single select (não muda)
     selected.value = option.value
     emit('select', option)
   }
-   // if (props.multiple) {
-  //   const idx = selectedMultiple.value.indexOf(option.value)
-  //   if (idx === -1) {
-  //     selectedMultiple.value.push(option.value)
-  //   } else {
-  //     selectedMultiple.value.splice(idx, 1)
-  //   }
-  //   // Emit the full array of selected values
-  //   emit('select', [...selectedMultiple.value])
-  // } else {
-  //   selected.value = option.value
-  //   emit('select', option)
-  // }
 }
 </script>
 
