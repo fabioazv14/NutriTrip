@@ -3,6 +3,7 @@ import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import QuestionCard from './QuestionCard.vue'
 import { questions } from '@/data/questions'
+import { nutritionApi } from '@/services/api'
 
 const router = useRouter()
 
@@ -37,7 +38,7 @@ function handleAnswer(option) {
   console.log('Selected:', option)
 }
 
-function nextQuestion() {
+async function nextQuestion() {
   if (swiping.value) return
 
   if (!isLastQuestion.value) {
@@ -62,6 +63,17 @@ function nextQuestion() {
       budget: answers.value[3]?.value || null,
     }
     localStorage.setItem('nutritrip_profile', JSON.stringify(profile))
+
+    // Also save profile to MySQL if user is logged in
+    try {
+      const user = localStorage.getItem('user')
+      if (user) {
+        const userData = JSON.parse(user)
+        if (userData.id) {
+          await nutritionApi.saveProfile(userData.id, profile)
+        }
+      }
+    } catch { /* continue even if save fails */ }
 
     finishing.value = true
     setTimeout(() => {

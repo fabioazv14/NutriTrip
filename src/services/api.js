@@ -75,21 +75,42 @@ export const aiApi = {
 }
 
 export const nutritionApi = {
-  async getTags(userId = 'guest') {
+  async getTags(userId) {
+    if (!userId) return { likes: [], dislikes: [], allergies: [], avoids: [], goals: [] }
     return request(`/nutrition/tags/${userId}`)
   },
 
-  async addTag(type, tag, userId = 'guest') {
+  async addTag(type, tag, userId) {
+    if (!userId) throw new Error('Must be logged in to add tags')
     return request('/nutrition/tags', {
       method: 'POST',
       body: JSON.stringify({ userId, type, tag, source: 'manual' }),
     })
   },
 
-  async removeTag(tagId, userId = 'guest') {
+  async removeTag(tagId, userId) {
+    if (!userId) throw new Error('Must be logged in to remove tags')
     return request(`/nutrition/tags/${userId}/${tagId}`, {
       method: 'DELETE',
     })
+  },
+
+  async saveProfile(userId, profile) {
+    if (!userId) throw new Error('Must be logged in to save profile')
+    return request('/nutrition/profile', {
+      method: 'POST',
+      body: JSON.stringify({ userId, ...profile }),
+    })
+  },
+
+  async getProfile(userId) {
+    if (!userId) return {}
+    return request(`/nutrition/profile/${userId}`)
+  },
+
+  async getFullProfile(userId) {
+    if (!userId) return {}
+    return request(`/nutrition/full-profile/${userId}`)
   },
 }
 

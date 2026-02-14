@@ -105,6 +105,16 @@ const profileAllergies = computed(() => {
 onMounted(() => {
   const saved = localStorage.getItem('nutritrip_profile')
   if (saved) profile.value = JSON.parse(saved)
+
+  // Attach userId from auth
+  const user = localStorage.getItem('user')
+  if (user) {
+    try {
+      const userData = JSON.parse(user)
+      if (userData.id) profile.value = { ...profile.value, userId: userData.id }
+    } catch { /* ignore */ }
+  }
+
   updateStreak()
   loadTags()
   loadSuggestions()
@@ -179,25 +189,39 @@ const tagTypeConfig = {
   goal: { icon: '◎', color: '#dbeafe', text: '#1e40af' },
 }
 
-async function loadTags() {
+function getAuthUserId() {
   try {
-    tags.value = await nutritionApi.getTags('guest')
+    const user = localStorage.getItem('user')
+    if (user) return JSON.parse(user).id
+  } catch { /* ignore */ }
+  return null
+}
+
+async function loadTags() {
+  const uid = getAuthUserId()
+  if (!uid) return
+  try {
+    tags.value = await nutritionApi.getTags(uid)
   } catch { /* backend may not be running */ }
 }
 
 async function addTag() {
   const text = newTagText.value.trim()
   if (!text) return
+  const uid = getAuthUserId()
+  if (!uid) return
   try {
-    tags.value = await nutritionApi.addTag(newTagType.value, text, 'guest')
+    tags.value = await nutritionApi.addTag(newTagType.value, text, uid)
     newTagText.value = ''
     showAddTag.value = false
   } catch { /* ignore */ }
 }
 
 async function removeTag(tagId) {
+  const uid = getAuthUserId()
+  if (!uid) return
   try {
-    tags.value = await nutritionApi.removeTag(tagId, 'guest')
+    tags.value = await nutritionApi.removeTag(tagId, uid)
   } catch { /* ignore */ }
 }
 </script>
