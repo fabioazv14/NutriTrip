@@ -1,34 +1,46 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { authApi } from '@/services/api'
 
 const router = useRouter()
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const isLoading = ref(false)
+const errorMessage = ref('')
 
-function handleLogin() {
-  // TODO: add real authentication logic
-  console.log('Login:', email.value, password.value)
+async function handleLogin() {
+  if (isLoading.value) return
   
-  // Simulate successful login
-  localStorage.setItem('isAuthenticated', 'true')
+  isLoading.value = true
+  errorMessage.value = ''
   
-  // Set a default profile if none exists, to satisfy the app's onboarding check
-  if (!localStorage.getItem('nutritrip_profile')) {
-    const defaultProfile = {
-      goal: 'maintain',
-      diet: [],
-      allergies: [],
-      budget: 'medium'
+  try {
+    const user = await authApi.login(email.value, password.value)
+    
+    // Store user data and auth state
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('user', JSON.stringify(user))
+    
+    // Set a default profile if none exists, to satisfy the app's onboarding check
+    if (!localStorage.getItem('nutritrip_profile')) {
+      const defaultProfile = {
+        goal: 'maintain',
+        diet: [],
+        allergies: [],
+        budget: 'medium'
+      }
+      localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
     }
-    localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
+    
+    router.push('/dashboard')
+  } catch (error) {
+    errorMessage.value = error.message
+  } finally {
+    isLoading.value = false
   }
-  
-  // Force a reload or event dispatch if necessary, strictly speaking router push should trigger the watch in App.vue
-  // but App.vue watches route.path, so navigation acts as the trigger.
-  router.push('/dashboard')
 }
 </script>
 
@@ -39,6 +51,7 @@ function handleLogin() {
       <div class="brand">
         <h1>Sign in</h1>
         <p class="subtitle">Welcome back! Sign in to continue.</p>
+        <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
       </div>
 
       <!-- Form -->
@@ -83,8 +96,10 @@ function handleLogin() {
           </label>
           <a href="#" class="forgot">Forgot password?</a>
         </div>
-
-        <button type="submit" class="btn-login">Sign In</button>
+        
+        <button type="submit" class="btn-login" :disabled="isLoading">
+          {{ isLoading ? 'Signing in...' : 'Sign In' }}
+        </button>
       </form>
 
       <p class="signup-text">
@@ -143,6 +158,16 @@ function handleLogin() {
 .subtitle {
   color: #6b7280;
   font-size: 0.9rem;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 12px;
+  background-color: #fef2f2;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
 }
 
 /* Form */

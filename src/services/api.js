@@ -15,10 +15,29 @@ async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}))
-    throw new Error(data.error || `Request failed with status ${response.status}`)
+    // FastAPI returns errors in 'detail', others might use 'error'
+    const message = data.detail || data.error || `Request failed with status ${response.status}`
+    throw new Error(message)
   }
 
   return response.json()
+}
+
+export const authApi = {
+  async login(email, password) {
+    return request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+  },
+  
+  async signup(data) {
+    // data: { email, password, nome, dob, genero, ... }
+    return request('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
 }
 
 export const aiApi = {

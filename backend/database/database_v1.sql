@@ -1,3 +1,5 @@
+drop if exists nutritrip;
+
 -- MySQL Workbench Forward Engineering
 
 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
@@ -20,6 +22,7 @@ USE `nutritrip` ;
 CREATE TABLE IF NOT EXISTS `nutritrip`.`Utilizador` (
   `Id` INT NOT NULL,
   `Email` VARCHAR(255) NOT NULL UNIQUE,
+  `Password` VARCHAR(255) NOT NULL,
   `Nome` VARCHAR(63) NOT NULL,
   `Dob` DATE NOT NULL,
   `Genero` ENUM('M', 'F', 'O') NOT NULL,

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { authApi } from '@/services/api'
 
 const router = useRouter()
 
@@ -8,12 +9,16 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const dob = ref('')
+const gender = ref('')
 const showPassword = ref(false)
 const showConfirm = ref(false)
 const error = ref('')
+const isLoading = ref(false)
 
-function handleRegister() {
+async function handleRegister() {
   error.value = ''
+  if (isLoading.value) return
 
   if (password.value.length < 6) {
     error.value = 'Password must be at least 6 characters.'
@@ -25,22 +30,36 @@ function handleRegister() {
     return
   }
 
-  // TODO: add real registration logic
-  console.log('Register:', name.value, email.value, password.value)
-  
-  // Simulate successful registration
-  localStorage.setItem('isAuthenticated', 'true')
-  
-  // Set a default profile for the new user
-  const defaultProfile = {
-    goal: 'maintain',
-    diet: [],
-    allergies: [],
-    budget: 'medium'
-  }
-  localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
+  isLoading.value = true
 
-  router.push('/questionnaire') // Maybe redirect to questionnaire for new users?
+  try {
+    const user = await authApi.signup({
+      nome: name.value,
+      email: email.value,
+      password: password.value, // Note: backend expects 'password' but implementation might vary. Python model has 'password'.
+      dob: dob.value,
+      genero: gender.value
+    }) 
+    
+    // Simulate successful registration
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('user', JSON.stringify(user))
+    
+    // Set a default profile for the new user
+    const defaultProfile = {
+      goal: 'maintain',
+      diet: [],
+      allergies: [],
+      budget: 'medium'
+    }
+    localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
+
+    router.push('/questionnaire')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -80,6 +99,28 @@ function handleRegister() {
             required
             autocomplete="email"
           />
+        </div>
+
+        <div class="row-group">
+          <div class="input-group">
+            <label for="dob">Date of Birth</label>
+            <input
+              id="dob"
+              v-model="dob"
+              type="date"
+              required
+            />
+          </div>
+          
+          <div class="input-group">
+            <label for="gender">Gender</label>
+            <select id="gender" v-model="gender" required>
+              <option value="" disabled>Select</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+              <option value="O">Other</option>
+            </select>
+          </div>
         </div>
 
         <div class="input-group">
@@ -124,7 +165,9 @@ function handleRegister() {
           </div>
         </div>
 
-        <button type="submit" class="btn-register">Sign Up</button>
+        <button type="submit" class="btn-register" :disabled="isLoading">
+            {{ isLoading ? 'Creating Account...' : 'Sign Up' }}
+        </button>
       </form>
 
       <p class="login-text">
@@ -214,11 +257,20 @@ import { RouterLink } from 'vue-router'
   font-size: 0.825rem;
   font-weight: 600;
   color: #374151;
+}row-group {
+  display: flex;
+  gap: 15px;
+}
+
+.row-group .input-group {
+  flex: 1;
 }
 
 .input-group input[type="email"],
 .input-group input[type="password"],
-.input-group input[type="text"] {
+.input-group input[type="text"],
+.input-group input[type="date"],
+.input-group select {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid #d1d5db;
@@ -230,6 +282,18 @@ import { RouterLink } from 'vue-router'
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
+
+.input-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+.input-group input:focus,
+.input-group selec
 
 .input-group input:focus {
   border-color: #22c55e;
