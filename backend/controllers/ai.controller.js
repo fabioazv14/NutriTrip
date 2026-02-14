@@ -6,7 +6,7 @@ export const aiController = {
    */
   async chat(req, res, next) {
     try {
-      const { message, sessionId, userProfile } = req.body
+      const { message, sessionId, userProfile, userId } = req.body
 
       if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message is required' })
@@ -16,7 +16,7 @@ export const aiController = {
         return res.status(400).json({ error: 'Session ID is required' })
       }
 
-      const result = await aiService.chat(sessionId, message.trim(), userProfile)
+      const result = await aiService.chat(sessionId, message.trim(), userProfile, userId || null)
       res.json(result)
     } catch (error) {
       next(error)

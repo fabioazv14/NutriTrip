@@ -22,10 +22,10 @@ async function request(endpoint, options = {}) {
 }
 
 export const aiApi = {
-  async sendMessage(message, sessionId, userProfile = null) {
+  async sendMessage(message, sessionId, userProfile = null, userId = null) {
     return request('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message, sessionId, userProfile }),
+      body: JSON.stringify({ message, sessionId, userProfile, userId }),
     })
   },
 

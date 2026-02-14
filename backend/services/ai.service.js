@@ -1,7 +1,9 @@
 import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { SYSTEM_PROMPT, buildUserContext } from '../utils/prompts.js'
+import { SYSTEM_PROMPT, buildUserContext, buildDbUserContext } from '../utils/prompts.js'
+import { userModel } from '../models/user.model.js'
+import { nutritionModel } from '../models/nutrition.model.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -55,8 +57,12 @@ function callPython(inputData) {
 export const aiService = {
   /**
    * Send a message to the AI and get a response
+   * @param {string} sessionId - Session identifier
+   * @param {string} message - User message
+   * @param {object|null} userProfile - Legacy profile from frontend (fallback)
+   * @param {number|null} userId - Database user ID for rich context
    */
-  async chat(sessionId, message, userProfile = null) {
+  async chat(sessionId, message, userProfile = null, userId = null) {
     if (!conversations.has(sessionId)) {
       conversations.set(sessionId, [])
     }
@@ -64,7 +70,25 @@ export const aiService = {
     const history = conversations.get(sessionId)
 
     // Build system message with user context
-    const systemMessage = SYSTEM_PROMPT + buildUserContext(userProfile)
+    let userContext = ''
+
+    if (userId) {
+      // Fetch rich profile from database
+      try {
+        const [dbProfile, recentMeals] = await Promise.all([
+          userModel.getFullProfile(userId),
+          nutritionModel.getRecentMeals(userId, 10),
+        ])
+        userContext = buildDbUserContext(dbProfile, recentMeals)
+      } catch (err) {
+        console.error('Failed to load DB profile, falling back:', err.message)
+        userContext = buildUserContext(userProfile)
+      }
+    } else {
+      userContext = buildUserContext(userProfile)
+    }
+
+    const systemMessage = SYSTEM_PROMPT + userContext
 
     // Trim history before sending
     if (history.length > MAX_HISTORY) {
