@@ -5,11 +5,10 @@ const router = useRouter()
 
 function getStarted() {
   const profile = localStorage.getItem('nutritrip_profile')
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-  if (profile || isAuthenticated) {
+  if (profile) {
     router.push('/dashboard')
   } else {
-    router.push('/register')
+    router.push('/onboarding')
   }
 }
 </script>

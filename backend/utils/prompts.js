@@ -1,20 +1,15 @@
 export const SYSTEM_PROMPT = `You are NutriTrip AI, a friendly and knowledgeable nutrition assistant. Your role is to help users with:
 
-- Personalized meal suggestions based on their dietary preferences, allergies, restrictions, and goals
+- Personalized meal suggestions based on their dietary preferences, allergies, and goals
 - Nutrition advice and information about foods
 - Meal planning tips for travel and daily life
 - Answering questions about macronutrients, vitamins, and healthy eating
 - Budget-friendly meal ideas
-- Tracking progress toward their nutrition and fitness goals
 
 Guidelines:
 - Be concise but informative. Keep responses focused and practical.
 - Use a warm, encouraging tone.
-- When suggesting meals, ALWAYS consider the user's profile data: restrictions, goals, recent meals, physical activities, and tags.
-- NEVER suggest foods that conflict with the user's dietary restrictions.
-- If you notice patterns in the user's recent meals (e.g., low variety, missing nutrients), proactively mention it.
-- Consider the user's physical activities when recommending calorie intake or meal sizes.
-- If the user has goals with deadlines, keep them in mind and offer relevant advice.
+- When suggesting meals, consider the user's profile (goal, diet, allergies, budget) if provided.
 - If you don't know something, say so honestly.
 - Format responses with clear structure when helpful (use bullet points, bold, etc).
 - Always prioritize food safety — warn about allergens when relevant.
@@ -24,16 +19,34 @@ Guidelines:
 You are NOT a doctor. Always recommend consulting a healthcare professional for medical nutrition advice.`
 
 /**
- * Build user context from simple profile (legacy/fallback)
+ * Prompt appended to every AI call — asks the model to also return
+ * extracted preference tags as structured JSON at the end of its reply.
  */
-export function buildUserContext(profile) {
-  if (!profile) return ''
+export const TAG_EXTRACTION_SUFFIX = `
 
+IMPORTANT: After your response, if the user's message reveals any food preferences, dislikes, allergies, foods they avoid, or nutrition goals, append a line at the very end of your reply in EXACTLY this format:
+[TAGS]{"tags":[{"type":"like|dislike|allergy|avoid|goal","tag":"short description"}]}[/TAGS]
+
+Rules for tags:
+- Keep each tag short (2-4 words max), e.g. "no milk", "likes chicken", "high protein", "avoids sugar"
+- Only extract CLEAR preferences, don't guess
+- Types: "like" (foods they enjoy), "dislike" (foods they don't like), "allergy" (food allergies), "avoid" (dietary restrictions), "goal" (nutrition goals like "high protein", "low carb")
+- If no preferences are expressed, do NOT include the [TAGS] block at all
+- The [TAGS] block must be the very LAST thing in your response`
+
+export function buildUserContext(profile, tagsSummary = '') {
   const parts = []
-  if (profile.goal) parts.push(`Goal: ${profile.goal}`)
-  if (profile.diet) parts.push(`Diet: ${Array.isArray(profile.diet) ? profile.diet.join(', ') : profile.diet}`)
-  if (profile.allergies) parts.push(`Allergies: ${Array.isArray(profile.allergies) ? profile.allergies.join(', ') : profile.allergies}`)
-  if (profile.budget) parts.push(`Daily food budget: $${profile.budget}`)
+
+  if (profile) {
+    if (profile.goal) parts.push(`Goal: ${profile.goal}`)
+    if (profile.diet) parts.push(`Diet: ${Array.isArray(profile.diet) ? profile.diet.join(', ') : profile.diet}`)
+    if (profile.allergies) parts.push(`Allergies: ${Array.isArray(profile.allergies) ? profile.allergies.join(', ') : profile.allergies}`)
+    if (profile.budget) parts.push(`Daily food budget: $${profile.budget}`)
+  }
+
+  if (tagsSummary) {
+    parts.push(`\nLearned preferences:\n${tagsSummary}`)
+  }
 
   if (parts.length === 0) return ''
 
@@ -41,64 +54,24 @@ export function buildUserContext(profile) {
 }
 
 /**
- * Build rich user context from database data
+ * Parse [TAGS] block from AI response and return clean response + tags
  */
-export function buildDbUserContext(dbProfile, recentMeals = []) {
-  if (!dbProfile) return ''
+export function parseTagsFromResponse(response) {
+  const tagMatch = response.match(/\[TAGS\](.*?)\[\/TAGS\]/s)
 
-  const parts = []
-
-  // Basic info
-  parts.push(`Name: ${dbProfile.Nome}`)
-  parts.push(`Gender: ${dbProfile.Genero === 'M' ? 'Male' : dbProfile.Genero === 'F' ? 'Female' : 'Other'}`)
-
-  if (dbProfile.Dob) {
-    const age = Math.floor((Date.now() - new Date(dbProfile.Dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    parts.push(`Age: ${age}`)
+  if (!tagMatch) {
+    return { cleanResponse: response.trim(), tags: [] }
   }
 
-  if (dbProfile.UltimoPeriodo) {
-    parts.push(`Last period: ${new Date(dbProfile.UltimoPeriodo).toLocaleDateString('pt-PT')}`)
-  }
+  const cleanResponse = response.replace(/\[TAGS\].*?\[\/TAGS\]/s, '').trim()
 
-  // Dietary restrictions
-  if (dbProfile.restrictions && dbProfile.restrictions.length > 0) {
-    parts.push(`Dietary restrictions: ${dbProfile.restrictions.join(', ')}`)
+  try {
+    const parsed = JSON.parse(tagMatch[1])
+    const tags = (parsed.tags || []).filter(
+      t => t.tag && t.type && ['like', 'dislike', 'allergy', 'avoid', 'goal'].includes(t.type)
+    )
+    return { cleanResponse, tags }
+  } catch {
+    return { cleanResponse, tags: [] }
   }
-
-  // Tags/preferences
-  if (dbProfile.tags && dbProfile.tags.length > 0) {
-    parts.push(`Tags/preferences: ${dbProfile.tags.join(', ')}`)
-  }
-
-  // Goals
-  if (dbProfile.goals && dbProfile.goals.length > 0) {
-    const goalLines = dbProfile.goals.map((g) => {
-      let line = `  - ${g.Descricao}`
-      if (g.Prazo) line += ` (deadline: ${new Date(g.Prazo).toLocaleDateString('pt-PT')})`
-      return line
-    })
-    parts.push(`Goals:\n${goalLines.join('\n')}`)
-  }
-
-  // Physical activities
-  if (dbProfile.activities && dbProfile.activities.length > 0) {
-    const actLines = dbProfile.activities.map((a) => `  - ${a.Atividade}: ${a.Duracao} min`)
-    parts.push(`Physical activities:\n${actLines.join('\n')}`)
-  }
-
-  // Recent meals
-  if (recentMeals && recentMeals.length > 0) {
-    const mealLines = recentMeals.map((m) => {
-      let line = `  - [${m.Tipo}] ${m.Designacao}`
-      if (m.alimentos && m.alimentos.length > 0) {
-        line += ` (${m.alimentos.join(', ')})`
-      }
-      if (m.TagTipo) line += ` #${m.TagTipo}`
-      return line
-    })
-    parts.push(`Recent meals:\n${mealLines.join('\n')}`)
-  }
-
-  return `\n\nUser profile (from database):\n${parts.join('\n')}`
 }

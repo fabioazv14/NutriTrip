@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { nutritionApi } from '../services/api.js'
 
 const router = useRouter()
 
@@ -91,6 +92,7 @@ onMounted(() => {
   const saved = localStorage.getItem('nutritrip_profile')
   if (saved) profile.value = JSON.parse(saved)
   updateStreak()
+  loadTags()
 })
 
 function updateStreak() {
@@ -111,6 +113,62 @@ function updateStreak() {
     localStorage.setItem('nutritrip_streak', streak.value)
     localStorage.setItem('nutritrip_last_visit', todayStr)
   }
+}
+
+// ─── Tags / Preferences ───────────────────────
+const tags = ref({ likes: [], dislikes: [], allergies: [], avoids: [], goals: [] })
+const showAddTag = ref(false)
+const newTagText = ref('')
+const newTagType = ref('like')
+
+const tagTypeOptions = [
+  { value: 'like', label: 'Like', emoji: '💚' },
+  { value: 'dislike', label: 'Dislike', emoji: '👎' },
+  { value: 'allergy', label: 'Allergy', emoji: '⚠️' },
+  { value: 'avoid', label: 'Avoid', emoji: '🚫' },
+  { value: 'goal', label: 'Goal', emoji: '🎯' },
+]
+
+const allTags = computed(() => {
+  const all = []
+  for (const [type, items] of Object.entries(tags.value)) {
+    const singularType = type === 'allergies' ? 'allergy' : type === 'likes' ? 'like'
+      : type === 'dislikes' ? 'dislike' : type === 'avoids' ? 'avoid' : 'goal'
+    for (const item of items) {
+      all.push({ ...item, type: singularType })
+    }
+  }
+  return all
+})
+
+const tagTypeConfig = {
+  like: { emoji: '💚', color: '#dcfce7', text: '#166534' },
+  dislike: { emoji: '👎', color: '#fee2e2', text: '#991b1b' },
+  allergy: { emoji: '⚠️', color: '#fef3c7', text: '#92400e' },
+  avoid: { emoji: '🚫', color: '#f3e8ff', text: '#6b21a8' },
+  goal: { emoji: '🎯', color: '#dbeafe', text: '#1e40af' },
+}
+
+async function loadTags() {
+  try {
+    tags.value = await nutritionApi.getTags('guest')
+  } catch { /* backend may not be running */ }
+}
+
+async function addTag() {
+  const text = newTagText.value.trim()
+  if (!text) return
+  try {
+    tags.value = await nutritionApi.addTag(newTagType.value, text, 'guest')
+    newTagText.value = ''
+    showAddTag.value = false
+  } catch { /* ignore */ }
+}
+
+async function removeTag(tagId) {
+  try {
+    tags.value = await nutritionApi.removeTag(tagId, 'guest')
+  } catch { /* ignore */ }
 }
 </script>
 
@@ -220,6 +278,58 @@ function updateStreak() {
           <polyline points="9 18 15 12 9 6"/>
         </svg>
       </button>
+    </div>
+
+    <!-- Learned Preferences (Tags) -->
+    <div class="card tags-card">
+      <div class="card-header">
+        <h2>🏷️ Learned Preferences</h2>
+        <button class="add-tag-toggle" @click="showAddTag = !showAddTag">
+          {{ showAddTag ? '✕' : '+ Add' }}
+        </button>
+      </div>
+      <p class="tags-hint">These are automatically learned from your chats, or you can add them manually.</p>
+
+      <!-- Add tag form -->
+      <Transition name="slide">
+        <div v-if="showAddTag" class="add-tag-form">
+          <div class="tag-type-selector">
+            <button
+              v-for="opt in tagTypeOptions"
+              :key="opt.value"
+              class="tag-type-btn"
+              :class="{ active: newTagType === opt.value }"
+              @click="newTagType = opt.value"
+            >
+              {{ opt.emoji }} {{ opt.label }}
+            </button>
+          </div>
+          <div class="tag-input-row">
+            <input
+              v-model="newTagText"
+              type="text"
+              placeholder="e.g. no milk, likes chicken, high protein..."
+              class="tag-input"
+              @keydown.enter="addTag"
+            />
+            <button class="tag-save-btn" :disabled="!newTagText.trim()" @click="addTag">Add</button>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Tags list -->
+      <div v-if="allTags.length" class="tags-list">
+        <span
+          v-for="t in allTags"
+          :key="t.id"
+          class="pref-tag"
+          :style="{ background: tagTypeConfig[t.type]?.color, color: tagTypeConfig[t.type]?.text }"
+        >
+          {{ tagTypeConfig[t.type]?.emoji }} {{ t.tag }}
+          <button class="tag-remove" @click="removeTag(t.id)">✕</button>
+        </span>
+      </div>
+      <p v-else class="tags-empty">No preferences yet — chat with NutriTrip AI and I'll learn what you like!</p>
     </div>
 
     <!-- Tip -->
@@ -583,6 +693,172 @@ function updateStreak() {
   border: 1px solid #fde68a;
   border-radius: 14px;
   padding: 18px 22px;
+}
+
+/* Tags card */
+.tags-card {
+  margin-bottom: 16px;
+}
+
+.tags-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tags-hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0 0 14px;
+}
+
+.add-tag-toggle {
+  background: none;
+  border: 1.5px solid #e5e7eb;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #22c55e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-tag-toggle:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.add-tag-form {
+  margin-bottom: 14px;
+  padding: 14px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.tag-type-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tag-type-btn {
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #374151;
+}
+
+.tag-type-btn.active {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.tag-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tag-input:focus {
+  border-color: #22c55e;
+}
+
+.tag-save-btn {
+  padding: 9px 18px;
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tag-save-btn:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.tag-save-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pref-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  color: inherit;
+  padding: 0;
+  line-height: 1;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+}
+
+.tags-empty {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin: 0;
+  font-style: italic;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+  padding: 0 14px;
+}
+
+.slide-enter-to,
+.slide-leave-from {
+  max-height: 200px;
+  opacity: 1;
 }
 
 .tip-left {

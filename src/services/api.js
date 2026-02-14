@@ -41,10 +41,10 @@ export const authApi = {
 }
 
 export const aiApi = {
-  async sendMessage(message, sessionId, userProfile = null, userId = null) {
+  async sendMessage(message, sessionId, userProfile = null) {
     return request('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message, sessionId, userProfile, userId }),
+      body: JSON.stringify({ message, sessionId, userProfile }),
     })
   },
 
@@ -57,5 +57,31 @@ export const aiApi = {
 
   async getHistory(sessionId) {
     return request(`/ai/history/${sessionId}`)
+  },
+
+  async scanMeal(imageBase64, mealType = 'meal') {
+    return request('/ai/scan-meal', {
+      method: 'POST',
+      body: JSON.stringify({ image: imageBase64, mealType }),
+    })
+  },
+}
+
+export const nutritionApi = {
+  async getTags(userId = 'guest') {
+    return request(`/nutrition/tags/${userId}`)
+  },
+
+  async addTag(type, tag, userId = 'guest') {
+    return request('/nutrition/tags', {
+      method: 'POST',
+      body: JSON.stringify({ userId, type, tag, source: 'manual' }),
+    })
+  },
+
+  async removeTag(tagId, userId = 'guest') {
+    return request(`/nutrition/tags/${userId}/${tagId}`, {
+      method: 'DELETE',
+    })
   },
 }

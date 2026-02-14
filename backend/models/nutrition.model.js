@@ -1,67 +1,81 @@
-import pool from '../config/db.js'
+import { getDb } from '../config/db.js'
 
-export const nutritionModel = {
+export const mealModel = {
   /**
-   * Get all meals for a user
+   * Log a meal
    */
-  async getMeals(userId) {
-    const [rows] = await pool.execute(
-      `SELECT r.Id, r.Tipo, r.Designacao, t.Tipo AS TagTipo
-       FROM Refeicao r
-       LEFT JOIN Tag t ON r.Tag = t.Id
-       WHERE r.Utilizador = ?
-       ORDER BY r.Id DESC`,
-      [userId]
-    )
-    return rows
+  add(userId, mealType, note = null, imagePath = null) {
+    const db = getDb()
+    const result = db.prepare(
+      'INSERT INTO meal_logs (user_id, meal_type, note, image_path) VALUES (?, ?, ?, ?)'
+    ).run(userId, mealType, note, imagePath)
+    return { id: result.lastInsertRowid, userId, mealType, note, imagePath }
   },
 
   /**
-   * Get meals with their foods for a user
+   * Get meals for a user on a specific date
    */
-  async getMealsWithFoods(userId) {
-    const meals = await this.getMeals(userId)
-
-    for (const meal of meals) {
-      const [foods] = await pool.execute(
-        `SELECT a.Designacao
-         FROM RefeicaoAlimento ra
-         INNER JOIN Alimento a ON ra.Alimento = a.Id
-         WHERE ra.Refeicao = ? AND ra.Utilizador = ?`,
-        [meal.Id, userId]
-      )
-      meal.alimentos = foods.map((f) => f.Designacao)
-    }
-
-    return meals
+  getByDate(userId, date) {
+    const db = getDb()
+    return db.prepare(`
+      SELECT * FROM meal_logs
+      WHERE user_id = ? AND DATE(logged_at) = DATE(?)
+      ORDER BY logged_at DESC
+    `).all(userId, date)
   },
 
   /**
-   * Get recent meals (last N) with foods for AI context
+   * Get today's meals
    */
-  async getRecentMeals(userId, limit = 10) {
-    const safeLimit = parseInt(limit) || 10
-    const [meals] = await pool.execute(
-      `SELECT r.Id, r.Tipo, r.Designacao, t.Tipo AS TagTipo
-       FROM Refeicao r
-       LEFT JOIN Tag t ON r.Tag = t.Id
-       WHERE r.Utilizador = ?
-       ORDER BY r.Id DESC
-       LIMIT ${safeLimit}`,
-      [userId]
-    )
+  getToday(userId) {
+    return this.getByDate(userId, new Date().toISOString())
+  },
 
-    for (const meal of meals) {
-      const [foods] = await pool.execute(
-        `SELECT a.Designacao
-         FROM RefeicaoAlimento ra
-         INNER JOIN Alimento a ON ra.Alimento = a.Id
-         WHERE ra.Refeicao = ? AND ra.Utilizador = ?`,
-        [meal.Id, userId]
-      )
-      meal.alimentos = foods.map((f) => f.Designacao)
+  /**
+   * Get recent meals (last N days)
+   */
+  getRecent(userId, days = 7) {
+    const db = getDb()
+    return db.prepare(`
+      SELECT * FROM meal_logs
+      WHERE user_id = ? AND logged_at >= datetime('now', ?)
+      ORDER BY logged_at DESC
+    `).all(userId, `-${days} days`)
+  },
+
+  /**
+   * Delete a meal
+   */
+  delete(mealId, userId) {
+    const db = getDb()
+    db.prepare('DELETE FROM meal_logs WHERE id = ? AND user_id = ?').run(mealId, userId)
+  },
+
+  /**
+   * Get meal stats for a user
+   */
+  getStats(userId) {
+    const db = getDb()
+    const todayCount = db.prepare(`
+      SELECT COUNT(*) as count FROM meal_logs
+      WHERE user_id = ? AND DATE(logged_at) = DATE('now')
+    `).get(userId)
+
+    const weekCount = db.prepare(`
+      SELECT COUNT(*) as count FROM meal_logs
+      WHERE user_id = ? AND logged_at >= datetime('now', '-7 days')
+    `).get(userId)
+
+    const byType = db.prepare(`
+      SELECT meal_type, COUNT(*) as count FROM meal_logs
+      WHERE user_id = ? AND logged_at >= datetime('now', '-7 days')
+      GROUP BY meal_type
+    `).all(userId)
+
+    return {
+      today: todayCount.count,
+      thisWeek: weekCount.count,
+      byType: Object.fromEntries(byType.map(r => [r.meal_type, r.count])),
     }
-
-    return meals
   },
 }

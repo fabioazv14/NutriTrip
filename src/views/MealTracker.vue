@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { aiApi } from '../services/api.js'
 
 const meals = ref([])
 const showUpload = ref(false)
@@ -8,6 +9,11 @@ const previewUrl = ref(null)
 const selectedFile = ref(null)
 const mealType = ref('lunch')
 const mealNote = ref('')
+
+// Scanning state
+const isScanning = ref(false)
+const scanResult = ref(null)
+const scanError = ref(null)
 
 const mealTypes = [
   { label: 'Breakfast', value: 'breakfast', icon: '/icons/breakfast.svg' },
@@ -21,7 +27,21 @@ const todayMeals = computed(() => {
   return meals.value.filter(m => new Date(m.date).toDateString() === today)
 })
 
-const caloriesCount = computed(() => todayMeals.value.length)
+const todayCalories = computed(() =>
+  todayMeals.value.reduce((sum, m) => sum + (m.calories || 0), 0)
+)
+
+const todayProtein = computed(() =>
+  todayMeals.value.reduce((sum, m) => sum + (m.protein || 0), 0)
+)
+
+const todayCarbs = computed(() =>
+  todayMeals.value.reduce((sum, m) => sum + (m.carbs || 0), 0)
+)
+
+const todayFat = computed(() =>
+  todayMeals.value.reduce((sum, m) => sum + (m.fat || 0), 0)
+)
 
 function openUpload() {
   showUpload.value = true
@@ -33,6 +53,9 @@ function closeUpload() {
   selectedFile.value = null
   mealNote.value = ''
   mealType.value = 'lunch'
+  scanResult.value = null
+  scanError.value = null
+  isScanning.value = false
 }
 
 function onFileSelect(event) {
@@ -59,11 +82,36 @@ function onDragLeave() {
 function processFile(file) {
   if (!file.type.startsWith('image/')) return
   selectedFile.value = file
+  scanResult.value = null
+  scanError.value = null
   const reader = new FileReader()
   reader.onload = (e) => {
     previewUrl.value = e.target.result
+    scanMealPhoto(e.target.result)
   }
   reader.readAsDataURL(file)
+}
+
+async function scanMealPhoto(base64Data) {
+  isScanning.value = true
+  scanError.value = null
+  try {
+    const result = await aiApi.scanMeal(base64Data, mealType.value)
+    scanResult.value = result
+    if (result.name && !mealNote.value) {
+      mealNote.value = result.name
+    }
+  } catch (err) {
+    scanError.value = err.message || 'Failed to analyze meal'
+  } finally {
+    isScanning.value = false
+  }
+}
+
+async function retryScan() {
+  if (previewUrl.value) {
+    await scanMealPhoto(previewUrl.value)
+  }
 }
 
 function saveMeal() {
@@ -78,6 +126,15 @@ function saveMeal() {
     image: previewUrl.value,
     date: new Date().toISOString(),
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    // Nutrition from AI scan
+    name: scanResult.value?.name || null,
+    description: scanResult.value?.description || null,
+    calories: scanResult.value?.calories || 0,
+    protein: scanResult.value?.protein || 0,
+    carbs: scanResult.value?.carbs || 0,
+    fat: scanResult.value?.fat || 0,
+    confidence: scanResult.value?.confidence || null,
+    items: scanResult.value?.items || [],
   })
 
   closeUpload()
@@ -99,7 +156,23 @@ function removeMeal(id) {
       <div class="stats">
         <div class="stat-card">
           <span class="stat-number">{{ todayMeals.length }}</span>
-          <span class="stat-label">Meals today</span>
+          <span class="stat-label">Meals</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number cal">{{ todayCalories }}</span>
+          <span class="stat-label">Calories</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number prot">{{ todayProtein }}g</span>
+          <span class="stat-label">Protein</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number carb">{{ todayCarbs }}g</span>
+          <span class="stat-label">Carbs</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number fats">{{ todayFat }}g</span>
+          <span class="stat-label">Fat</span>
         </div>
       </div>
     </div>
@@ -159,9 +232,69 @@ function removeMeal(id) {
           <!-- Preview -->
           <div v-else class="preview-container">
             <img :src="previewUrl" alt="Meal preview" class="preview-img" />
-            <button class="change-photo" @click="previewUrl = null; selectedFile = null">
+            <button class="change-photo" @click="previewUrl = null; selectedFile = null; scanResult = null; scanError = null">
               Change photo
             </button>
+
+            <!-- Scanning indicator -->
+            <div v-if="isScanning" class="scan-status scanning">
+              <div class="scan-spinner"></div>
+              <span>Analyzing your meal...</span>
+            </div>
+
+            <!-- Scan error -->
+            <div v-else-if="scanError" class="scan-status error">
+              <span>⚠️ {{ scanError }}</span>
+              <button class="retry-btn" @click="retryScan">Retry</button>
+            </div>
+
+            <!-- Scan results -->
+            <div v-else-if="scanResult" class="scan-results">
+              <div class="scan-header">
+                <h3 class="scan-meal-name">{{ scanResult.name }}</h3>
+                <span v-if="scanResult.confidence" class="confidence-badge" :class="scanResult.confidence">
+                  {{ scanResult.confidence }}
+                </span>
+              </div>
+              <p v-if="scanResult.description" class="scan-description">{{ scanResult.description }}</p>
+
+              <!-- Items detected -->
+              <div v-if="scanResult.items && scanResult.items.length" class="scan-items">
+                <span v-for="(item, i) in scanResult.items" :key="i" class="item-tag">{{ item }}</span>
+              </div>
+
+              <!-- Macro bars -->
+              <div class="macro-grid">
+                <div class="macro-item calories">
+                  <div class="macro-top">
+                    <span class="macro-label">Calories</span>
+                    <span class="macro-value">{{ scanResult.calories }}</span>
+                  </div>
+                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.calories / 800) * 100) + '%' }"></div></div>
+                </div>
+                <div class="macro-item protein">
+                  <div class="macro-top">
+                    <span class="macro-label">Protein</span>
+                    <span class="macro-value">{{ scanResult.protein }}g</span>
+                  </div>
+                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.protein / 50) * 100) + '%' }"></div></div>
+                </div>
+                <div class="macro-item carbs">
+                  <div class="macro-top">
+                    <span class="macro-label">Carbs</span>
+                    <span class="macro-value">{{ scanResult.carbs }}g</span>
+                  </div>
+                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.carbs / 100) * 100) + '%' }"></div></div>
+                </div>
+                <div class="macro-item fat">
+                  <div class="macro-top">
+                    <span class="macro-label">Fat</span>
+                    <span class="macro-value">{{ scanResult.fat }}g</span>
+                  </div>
+                  <div class="macro-bar"><div class="macro-fill" :style="{ width: Math.min(100, (scanResult.fat / 65) * 100) + '%' }"></div></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Note -->
@@ -175,10 +308,10 @@ function removeMeal(id) {
           <!-- Save -->
           <button
             class="save-btn"
-            :disabled="!previewUrl"
+            :disabled="!previewUrl || isScanning"
             @click="saveMeal"
           >
-            Save Meal
+            {{ isScanning ? 'Analyzing...' : scanResult ? 'Save Meal' : 'Save without analysis' }}
           </button>
         </div>
       </div>
@@ -200,7 +333,14 @@ function removeMeal(id) {
               </span>
               <span class="meal-time">{{ meal.time }}</span>
             </div>
-            <p v-if="meal.note" class="meal-note-text">{{ meal.note }}</p>
+            <p v-if="meal.name" class="meal-name-text">{{ meal.name }}</p>
+            <p v-else-if="meal.note" class="meal-note-text">{{ meal.note }}</p>
+            <div v-if="meal.calories" class="meal-macros-inline">
+              <span class="macro-tag cal">{{ meal.calories }} kcal</span>
+              <span class="macro-tag prot">{{ meal.protein }}g P</span>
+              <span class="macro-tag carb">{{ meal.carbs }}g C</span>
+              <span class="macro-tag fats">{{ meal.fat }}g F</span>
+            </div>
           </div>
           <button class="meal-delete" @click="removeMeal(meal.id)">
             <img src="/icons/trash.svg" alt="Delete" class="delete-icon" />
@@ -283,6 +423,11 @@ function removeMeal(id) {
   color: #6b7280;
   font-weight: 500;
 }
+
+.stat-number.cal { color: #f59e0b; }
+.stat-number.prot { color: #3b82f6; }
+.stat-number.carb { color: #8b5cf6; }
+.stat-number.fats { color: #ef4444; }
 
 /* Add button */
 .add-meal-btn {
@@ -668,4 +813,213 @@ function removeMeal(id) {
   font-weight: 400 !important;
   color: #9ca3af !important;
 }
+
+/* Scan status */
+.scan-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 12px;
+}
+
+.scan-status.scanning {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.scan-status.error {
+  background: #fef2f2;
+  color: #dc2626;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.retry-btn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover {
+  background: #b91c1c;
+}
+
+.scan-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid #bbf7d0;
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scan results */
+.scan-results {
+  margin-top: 12px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.scan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.scan-meal-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.confidence-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: capitalize;
+}
+
+.confidence-badge.high {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.confidence-badge.medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.confidence-badge.low {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.scan-description {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.scan-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.item-tag {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  background: #f0fdf4;
+  color: #166534;
+  border-radius: 20px;
+  border: 1px solid #bbf7d0;
+}
+
+/* Macro grid */
+.macro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.macro-item {
+  padding: 8px 10px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #f3f4f6;
+}
+
+.macro-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.macro-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.macro-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.macro-item.calories .macro-value { color: #f59e0b; }
+.macro-item.protein .macro-value { color: #3b82f6; }
+.macro-item.carbs .macro-value { color: #8b5cf6; }
+.macro-item.fat .macro-value { color: #ef4444; }
+
+.macro-bar {
+  height: 4px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.macro-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.macro-item.calories .macro-fill { background: #f59e0b; }
+.macro-item.protein .macro-fill { background: #3b82f6; }
+.macro-item.carbs .macro-fill { background: #8b5cf6; }
+.macro-item.fat .macro-fill { background: #ef4444; }
+
+/* Meal card macros */
+.meal-name-text {
+  font-size: 0.85rem;
+  color: #111827;
+  font-weight: 600;
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meal-macros-inline {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.macro-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.macro-tag.cal { background: #fef3c7; color: #92400e; }
+.macro-tag.prot { background: #dbeafe; color: #1e40af; }
+.macro-tag.carb { background: #ede9fe; color: #5b21b6; }
+.macro-tag.fats { background: #fee2e2; color: #991b1b; }
 </style>

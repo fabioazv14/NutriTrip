@@ -19,12 +19,6 @@ const userProfile = computed(() => {
   return saved ? JSON.parse(saved) : null
 })
 
-// Database user ID (if logged in)
-const userId = computed(() => {
-  const saved = localStorage.getItem('nutritrip_user_id')
-  return saved ? parseInt(saved) : null
-})
-
 onMounted(() => {
   messages.value.push({
     role: 'assistant',
@@ -64,7 +58,7 @@ async function sendMessage() {
 
   isLoading.value = true
   try {
-    const response = await aiApi.sendMessage(text, sessionId.value, userProfile.value, userId.value)
+    const response = await aiApi.sendMessage(text, sessionId.value, userProfile.value)
 
     messages.value.push({
       role: 'assistant',
