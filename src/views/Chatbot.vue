@@ -13,10 +13,19 @@ const inputRef = ref(null)
 const sessionId = ref(localStorage.getItem('nutritrip_session') || crypto.randomUUID())
 localStorage.setItem('nutritrip_session', sessionId.value)
 
-// User profile from onboarding (if saved)
+// User profile from onboarding (if saved) + userId from auth
 const userProfile = computed(() => {
   const saved = localStorage.getItem('nutritrip_profile')
-  return saved ? JSON.parse(saved) : null
+  const user = localStorage.getItem('user')
+  const profile = saved ? JSON.parse(saved) : {}
+  // Attach MySQL Utilizador.Id from auth
+  if (user) {
+    try {
+      const userData = JSON.parse(user)
+      profile.userId = userData.id
+    } catch { /* ignore */ }
+  }
+  return Object.keys(profile).length > 0 ? profile : null
 })
 
 onMounted(() => {

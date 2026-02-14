@@ -2,13 +2,15 @@ import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { SYSTEM_PROMPT, TAG_EXTRACTION_SUFFIX, buildUserContext, buildMealsSummary, parseTagsFromResponse } from '../utils/prompts.js'
-import { userModel } from '../models/user.model.js'
+import { preferenceModel } from '../models/preference.model.js'
 import { mealModel } from '../models/nutrition.model.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const PYTHON_SCRIPT = join(__dirname, '..', 'ia', 'ia_api.py')
-const PYTHON_VISION_SCRIPT = join(__dirname, '..', 'ia', 'ia_vision.py')
+const IA_DIR = join(__dirname, '..', 'ia')
+const PYTHON_BIN = join(IA_DIR, 'venv', 'bin', 'python3')
+const PYTHON_SCRIPT = join(IA_DIR, 'ia_api.py')
+const PYTHON_VISION_SCRIPT = join(IA_DIR, 'ia_vision.py')
 
 // In-memory conversation store (per session)
 const conversations = new Map()
@@ -19,8 +21,8 @@ const MAX_HISTORY = 20
  */
 function callPython(inputData) {
   return new Promise((resolve, reject) => {
-    const py = spawn('python3', [PYTHON_SCRIPT], {
-      cwd: join(__dirname, '..', 'ia'),
+    const py = spawn(PYTHON_BIN, [PYTHON_SCRIPT], {
+      cwd: IA_DIR,
     })
 
     let stdout = ''
@@ -59,8 +61,8 @@ function callPython(inputData) {
  */
 function callPythonVision(inputData) {
   return new Promise((resolve, reject) => {
-    const py = spawn('python3', [PYTHON_VISION_SCRIPT], {
-      cwd: join(__dirname, '..', 'ia'),
+    const py = spawn(PYTHON_BIN, [PYTHON_VISION_SCRIPT], {
+      cwd: IA_DIR,
     })
 
     let stdout = ''
@@ -104,12 +106,14 @@ export const aiService = {
 
     const history = conversations.get(sessionId)
 
-    // Get learned preference tags for this user
-    const userId = userProfile?.userId || 'guest'
+    // Get the MySQL user ID (integer from Utilizador table)
+    const userId = userProfile?.userId || null
     let tagsSummary = ''
-    try {
-      tagsSummary = userModel.getTagsSummary(userId)
-    } catch { /* DB not ready yet, that's fine */ }
+    if (userId) {
+      try {
+        tagsSummary = await preferenceModel.getTagsSummary(userId)
+      } catch { /* DB not ready yet, that's fine */ }
+    }
 
     // Get today's meals for context
     let mealsSummary = ''
@@ -137,10 +141,10 @@ export const aiService = {
       // Parse tags from the AI response
       const { cleanResponse, tags } = parseTagsFromResponse(result.response)
 
-      // Save extracted tags to DB
-      if (tags.length > 0) {
+      // Save extracted tags to MySQL
+      if (tags.length > 0 && userId) {
         try {
-          userModel.addTags(userId, tags, 'chat')
+          await preferenceModel.addTags(userId, tags, 'chat')
         } catch { /* DB not ready */ }
       }
 
@@ -191,13 +195,15 @@ export const aiService = {
    * Get personalized meal suggestions based on preferences and meal history
    */
   async getSuggestions(userProfile = null) {
-    const userId = userProfile?.userId || 'guest'
+    const userId = userProfile?.userId || null
 
-    // Gather context
+    // Gather context from MySQL
     let tagsSummary = ''
-    try {
-      tagsSummary = userModel.getTagsSummary(userId)
-    } catch { /* DB not ready */ }
+    if (userId) {
+      try {
+        tagsSummary = await preferenceModel.getTagsSummary(userId)
+      } catch { /* DB not ready */ }
+    }
 
     let mealsSummary = ''
     try {

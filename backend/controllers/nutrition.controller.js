@@ -1,4 +1,4 @@
-import { userModel } from '../models/user.model.js'
+import { preferenceModel } from '../models/preference.model.js'
 import { mealModel } from '../models/nutrition.model.js'
 
 export const nutritionController = {
@@ -8,7 +8,8 @@ export const nutritionController = {
   async getTags(req, res, next) {
     try {
       const { userId } = req.params
-      const tags = userModel.getTagsGrouped(userId || 'guest')
+      if (!userId) return res.status(400).json({ error: 'userId is required' })
+      const tags = await preferenceModel.getTagsGrouped(parseInt(userId))
       res.json(tags)
     } catch (error) {
       next(error)
@@ -21,10 +22,10 @@ export const nutritionController = {
    */
   async addTag(req, res, next) {
     try {
-      const { userId = 'guest', type, tag, source = 'manual' } = req.body
+      const { userId, type, tag, source = 'manual' } = req.body
 
-      if (!type || !tag) {
-        return res.status(400).json({ error: 'Type and tag are required' })
+      if (!userId || !type || !tag) {
+        return res.status(400).json({ error: 'userId, type and tag are required' })
       }
 
       const validTypes = ['like', 'dislike', 'allergy', 'avoid', 'goal']
@@ -32,8 +33,8 @@ export const nutritionController = {
         return res.status(400).json({ error: `Type must be one of: ${validTypes.join(', ')}` })
       }
 
-      userModel.addTag(userId, type, tag, source)
-      const tags = userModel.getTagsGrouped(userId)
+      await preferenceModel.addTag(parseInt(userId), type, tag, source)
+      const tags = await preferenceModel.getTagsGrouped(parseInt(userId))
       res.json(tags)
     } catch (error) {
       next(error)
@@ -46,9 +47,54 @@ export const nutritionController = {
   async removeTag(req, res, next) {
     try {
       const { userId, tagId } = req.params
-      userModel.removeTag(userId || 'guest', parseInt(tagId))
-      const tags = userModel.getTagsGrouped(userId || 'guest')
+      if (!userId) return res.status(400).json({ error: 'userId is required' })
+      await preferenceModel.removeTag(parseInt(userId), parseInt(tagId))
+      const tags = await preferenceModel.getTagsGrouped(parseInt(userId))
       res.json(tags)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  /**
+   * POST /api/nutrition/profile
+   * Body: { userId, goal, diet, allergies, budget }
+   */
+  async saveProfile(req, res, next) {
+    try {
+      const { userId, ...profile } = req.body
+      if (!userId) return res.status(400).json({ error: 'userId is required' })
+      const result = await preferenceModel.saveProfile(parseInt(userId), profile)
+      res.json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  /**
+   * GET /api/nutrition/profile/:userId
+   */
+  async getProfile(req, res, next) {
+    try {
+      const { userId } = req.params
+      if (!userId) return res.status(400).json({ error: 'userId is required' })
+      const profile = await preferenceModel.getProfile(parseInt(userId))
+      res.json(profile || {})
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  /**
+   * GET /api/nutrition/full-profile/:userId
+   * Returns complete user info + profile + preferences for AI context
+   */
+  async getFullProfile(req, res, next) {
+    try {
+      const { userId } = req.params
+      if (!userId) return res.status(400).json({ error: 'userId is required' })
+      const profile = await preferenceModel.getFullProfile(parseInt(userId))
+      res.json(profile)
     } catch (error) {
       next(error)
     }
