@@ -10,7 +10,7 @@ const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const dob = ref('')
-const gender = ref('')
+// const gender = ref('')
 const showPassword = ref(false)
 const showConfirm = ref(false)
 const error = ref('')
@@ -38,9 +38,9 @@ async function handleRegister() {
       email: email.value,
       password: password.value, // Note: backend expects 'password' but implementation might vary. Python model has 'password'.
       dob: dob.value,
-      genero: gender.value
-    }) 
-    
+      genero: "O"
+    })
+
     // Simulate successful registration
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('user', JSON.stringify(user))
@@ -56,7 +56,7 @@ async function handleRegister() {
 
     router.push('/onboarding')
   } catch (e) {
-    error.value = e.message
+    error.value = typeof e?.message === 'string' ? e.message : JSON.stringify(e)
   } finally {
     isLoading.value = false
   }
@@ -73,7 +73,9 @@ async function handleRegister() {
       </div>
 
       <!-- Error -->
-      <div v-if="error" class="error-msg">{{ error }}</div>
+      <div v-if="error" class="error-msg">
+        {{ typeof error === 'object' ? error.message || JSON.stringify(error) : error }}
+      </div>
 
       <!-- Form -->
       <form @submit.prevent="handleRegister" class="register-form">
@@ -112,15 +114,7 @@ async function handleRegister() {
             />
           </div>
           
-          <div class="input-group">
-            <label for="gender">Gender</label>
-            <select id="gender" v-model="gender" required>
-              <option value="" disabled>Select</option>
-              <option value="M">Male</option>
-              <option value="F">Female</option>
-              <option value="O">Other</option>
-            </select>
-          </div>
+          <!-- Gender selection removed: now asked in onboarding questions -->
         </div>
 
         <div class="input-group">
