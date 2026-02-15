@@ -15,9 +15,10 @@ function getStarted() {
 
 <template>
   <div class="landing">
+    <img src="/NutriTrip.png" alt="NutriTrip Logo" class="bg-logo" aria-hidden="true" />
     <!-- Nav -->
     <header class="landing-nav">
-      <span class="logo">🥗 NutriTrip</span>
+      <img src="/NutriTripBanner.png" alt="NutriTrip Logo" class="logo" />
       <div class="nav-actions">
         <RouterLink to="/login" class="nav-link">Log in</RouterLink>
         <RouterLink to="/register" class="nav-btn">Sign up</RouterLink>
@@ -118,6 +119,10 @@ function getStarted() {
   padding: 20px 48px;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.landing-nav img {
+  height: 32px;
 }
 
 .logo {
@@ -431,4 +436,18 @@ function getStarted() {
     padding: 40px 20px;
   }
 }
+/* Big background logo */
+.bg-logo {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  max-width: 90vw;
+  opacity: 0.07;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
 </style>
