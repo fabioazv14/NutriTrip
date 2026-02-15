@@ -49,7 +49,6 @@ class UserSignup(BaseModel):
     password: str = Field(..., min_length=6)
     nome: str
     dob: date
-    genero: str = Field(..., pattern="^(M|F|O)$")
     ultimo_periodo: Optional[date] = None
 
 class UserLogin(BaseModel):
@@ -88,8 +87,8 @@ def signup(user: UserSignup):
 
         # Insert user
         query = """
-            INSERT INTO Utilizador (Id, Email, Password, Nome, Dob, Genero, UltimoPeriodo)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO Utilizador (Id, Email, Password, Nome, Dob, UltimoPeriodo)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
         values = (
             next_id,
@@ -97,7 +96,6 @@ def signup(user: UserSignup):
             hashed_password,
             user.nome,
             user.dob,
-            user.genero,
             user.ultimo_periodo
         )
         cursor.execute(query, values)

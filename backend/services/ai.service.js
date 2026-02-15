@@ -228,10 +228,19 @@ export const aiService = {
     else if (hour < 14) mealTime = 'lunch'
     else if (hour < 17) mealTime = 'snack'
 
+
     const userContext = buildUserContext(userProfile, tagsSummary, mealsSummary + recentMealNames)
 
+    // Pregnancy/breastfeeding context
+    let pregnancyContext = ''
+    let pregnancyRules = ''
+    if (userProfile?.pregnantOrBreastfeeding === 'yes') {
+      pregnancyContext = '\nUser is currently pregnant or breastfeeding.'
+      pregnancyRules = `\n- Adapt all suggestions for pregnancy or breastfeeding: prioritize protein, calcium, iron, and folate; include healthy snacks; ensure extra calories and fluids if breastfeeding; avoid raw fish, unpasteurized dairy, and limit caffeine.`
+    }
+
     const prompt = `Based on the user's profile, preferences, and meal history, suggest exactly 3 ${mealTime} ideas.
-${userContext}
+${userContext}${pregnancyContext}
 
 IMPORTANT: Respond ONLY with valid JSON, no other text. Use this exact format:
 [
@@ -246,7 +255,7 @@ Rules:
 - Respect dislikes and dietary restrictions
 - Match the user's goal (${userProfile?.goal || 'maintain'})
 - Suggest variety from recent meals
-- Keep descriptions concise`
+- Keep descriptions concise${pregnancyRules}`
 
     try {
       const result = await callPython({
