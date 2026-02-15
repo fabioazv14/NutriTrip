@@ -2,6 +2,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { aiApi, mealsApi } from '../services/api.js'
 
+function getAuthUserId() {
+  try {
+    const user = localStorage.getItem('user')
+    if (user) {
+      const parsed = JSON.parse(user)
+      return parsed.user?.id || parsed.id || 'guest'
+    }
+  } catch { /* ignore */ }
+  return 'guest'
+}
+
 const meals = ref([])
 const showUpload = ref(false)
 const dragOver = ref(false)
@@ -79,7 +90,7 @@ async function loadMeals() {
   isLoading.value = true
   try {
     const today = new Date().toISOString().split('T')[0]
-    const dbMeals = await mealsApi.getMeals('guest', today)
+    const dbMeals = await mealsApi.getMeals(getAuthUserId(), today)
     meals.value = dbMeals.map(m => ({
       id: m.id,
       type: m.meal_type,
@@ -188,7 +199,7 @@ async function saveMeal() {
       protein: scanResult.value?.protein || 0,
       carbs: scanResult.value?.carbs || 0,
       fat: scanResult.value?.fat || 0,
-    })
+    }, getAuthUserId())
 
     meals.value.unshift({
       id: savedMeal.id,
@@ -216,7 +227,7 @@ async function saveMeal() {
 
 async function removeMeal(id) {
   try {
-    await mealsApi.deleteMeal(id)
+    await mealsApi.deleteMeal(id, getAuthUserId())
     meals.value = meals.value.filter(m => m.id !== id)
   } catch (err) {
     console.error('Failed to delete meal:', err)

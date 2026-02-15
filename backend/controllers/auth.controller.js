@@ -13,7 +13,7 @@ export const authController = {
         return res.status(400).json({ error: 'All fields are required' })
       }
 
-      const existingUser = userModel.findByEmail(email)
+      const existingUser = await userModel.findByEmail(email)
       if (existingUser) {
         return res.status(409).json({ error: 'Email already registered' })
       }
@@ -21,7 +21,7 @@ export const authController = {
       const salt = await bcrypt.genSalt(10)
       const hashedPassword = await bcrypt.hash(password, salt)
 
-      const user = userModel.create(name, email, hashedPassword)
+      const user = await userModel.create(name, email, hashedPassword)
 
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
         expiresIn: '24h',
@@ -44,7 +44,7 @@ export const authController = {
         return res.status(400).json({ error: 'Email and password are required' })
       }
 
-      const user = userModel.findByEmail(email)
+      const user = await userModel.findByEmail(email)
       if (!user) {
         return res.status(401).json({ error: 'Invalid credentials' })
       }

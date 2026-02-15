@@ -124,7 +124,7 @@ export const nutritionController = {
         return res.status(400).json({ error: 'mealType is required' })
       }
 
-      const meal = mealModel.add(userId, {
+      const meal = await mealModel.add(userId, {
         mealType,
         name,
         note,
@@ -152,9 +152,9 @@ export const nutritionController = {
 
       let meals
       if (date) {
-        meals = mealModel.getByDate(userId || 'guest', date)
+        meals = await mealModel.getByDate(userId || 'guest', date)
       } else {
-        meals = mealModel.getToday(userId || 'guest')
+        meals = await mealModel.getToday(userId || 'guest')
       }
 
       res.json(meals)
@@ -169,7 +169,7 @@ export const nutritionController = {
   async deleteMeal(req, res, next) {
     try {
       const { userId, mealId } = req.params
-      mealModel.delete(parseInt(mealId), userId || 'guest')
+      await mealModel.delete(parseInt(mealId), userId || 'guest')
       res.json({ success: true })
     } catch (error) {
       next(error)
@@ -182,7 +182,7 @@ export const nutritionController = {
   async getMealStats(req, res, next) {
     try {
       const { userId } = req.params
-      const stats = mealModel.getStats(userId || 'guest')
+      const stats = await mealModel.getStats(userId || 'guest')
       res.json(stats)
     } catch (error) {
       next(error)

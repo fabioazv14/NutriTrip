@@ -14,6 +14,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  grid: {
+    type: Boolean,
+    default: false,
+  },
   // For single: String | null, for multiple: Array | null
   selectedValue: {
     default: null,
@@ -49,13 +53,25 @@ function isActive(option) {
 
 function handleSelect(option) {
   if (props.multiple) {
-    const idx = selectedMultiple.value.indexOf(option.value)
-    if (idx === -1) {
-      selectedMultiple.value.push(option.value)
+    if (option.exclusive) {
+      // Exclusive option: deselect everything else, toggle this one
+      if (selectedMultiple.value.includes(option.value)) {
+        selectedMultiple.value = []
+      } else {
+        selectedMultiple.value = [option.value]
+      }
     } else {
-      selectedMultiple.value.splice(idx, 1)
+      // Non-exclusive option: remove any exclusive options first
+      const exclusiveValues = props.options.filter(o => o.exclusive).map(o => o.value)
+      selectedMultiple.value = selectedMultiple.value.filter(v => !exclusiveValues.includes(v))
+
+      const idx = selectedMultiple.value.indexOf(option.value)
+      if (idx === -1) {
+        selectedMultiple.value.push(option.value)
+      } else {
+        selectedMultiple.value.splice(idx, 1)
+      }
     }
-    // Emit the full array of selected values
     emit('select', [...selectedMultiple.value])
   } else {
     selected.value = option.value
@@ -68,7 +84,7 @@ function handleSelect(option) {
   <div class="question-card">
     <h2 class="question-text">{{ question }}</h2>
     <p v-if="multiple" class="hint">Select all that apply</p>
-    <div class="options">
+    <div class="options" :class="{ 'options-grid': grid }">
       <button
         v-for="(option, index) in options"
         :key="index"
@@ -115,6 +131,18 @@ function handleSelect(option) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.options-grid .option-btn {
+  padding: 16px 12px;
+  font-size: 0.92rem;
+  text-align: center;
 }
 
 .option-btn {
