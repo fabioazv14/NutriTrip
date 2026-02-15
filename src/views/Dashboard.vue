@@ -106,6 +106,12 @@ onMounted(() => {
   const saved = localStorage.getItem('nutritrip_profile')
   if (saved) profile.value = JSON.parse(saved)
 
+  // Guarantee .pregnantOrBreastfeeding always exists for reactivity/UI
+  if (!profile.value) profile.value = {}
+  if (typeof profile.value.pregnantOrBreastfeeding === 'undefined') {
+    profile.value.pregnantOrBreastfeeding = 'no'
+  }
+
   // Attach userId from auth
   const user = localStorage.getItem('user')
   if (user) {
@@ -162,6 +168,10 @@ function updateStreak() {
 // ─── Period / Cycle Tracker ───────────────────
 const showCycleTracker = computed(() =>
   profile.value?.sex === 'female' && profile.value?.menstrualCycle === 'yes'
+)
+
+const showPregnancyTracker = computed(() =>
+  profile.value?.sex === 'female' && profile.value?.pregnantOrBreastfeeding === 'yes'
 )
 
 const lastPeriodDate = ref(null)
@@ -400,10 +410,12 @@ async function removeTag(tagId) {
       </button>
     </div>
 
+
     <!-- Period / Cycle Tracker -->
     <div v-if="showCycleTracker" class="card cycle-card">
       <div class="card-header">
-        <h2>🩸 Cycle Tracker</h2>
+        <img src="/blood.png" alt="" class="section-icon" />
+        <h2> Cycle Tracker</h2>
         <span v-if="cyclePhase" class="cycle-phase-badge" :style="{ background: cyclePhase.color, color: cyclePhase.textColor }">
           {{ cyclePhase.emoji }} {{ cyclePhase.name }} phase
         </span>
@@ -457,6 +469,19 @@ async function removeTag(tagId) {
             </select>
           </label>
         </div>
+      </div>
+    </div>
+
+    <!-- Pregnancy / Breastfeeding Tracker -->
+    <div v-if="showPregnancyTracker" class="card cycle-card">
+      <div class="card-header">
+        <img src="/person-pregnant.png" alt="" class="section-icon" />
+        <h2> Pregnancy / Breastfeeding</h2>
+      </div>
+      <div class="cycle-setup">
+        <p class="cycle-setup-text">
+          NutriTrip will adapt your nutrition tips and meal suggestions to support your needs during pregnancy or breastfeeding. Make sure to consult your healthcare provider for personalized advice.
+        </p>
       </div>
     </div>
 

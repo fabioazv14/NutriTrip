@@ -66,5 +66,14 @@ export const questions = [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
+  },
+  {
+    question: "Are you currently pregnant or breastfeeding?",
+    grid: true,
+    showIf: (answers) => answers[1]?.value === 'female',
+    options: [
+       { label: 'Yes', value: 'yes' },
+       { label: 'No', value: 'no' },
+     ],
   }
 ]

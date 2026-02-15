@@ -58,6 +58,7 @@ function nextQuestion() {
     }, 400)
   } else {
     // Save profile
+
     const profile = {
       goal: answers.value[0]?.value || null,
       sex: answers.value[1]?.value || null,
@@ -66,6 +67,7 @@ function nextQuestion() {
       allergies: Array.isArray(answers.value[4]) ? answers.value[4] : (answers.value[4]?.value ? [answers.value[4].value] : null),
       budget: answers.value[5]?.value || null,
       menstrualCycle: answers.value[6]?.value || null,
+      pregnantOrBreastfeeding: answers.value[7]?.value || 'no',
     }
     localStorage.setItem('nutritrip_profile', JSON.stringify(profile))
 
