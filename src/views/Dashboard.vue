@@ -111,7 +111,8 @@ onMounted(() => {
   if (user) {
     try {
       const userData = JSON.parse(user)
-      if (userData.id) profile.value = { ...profile.value, userId: userData.id }
+      const uid = userData.user?.id || userData.id
+      if (uid) profile.value = { ...profile.value, userId: uid }
     } catch { /* ignore */ }
   }
 
@@ -239,7 +240,10 @@ const tagTypeConfig = {
 function getAuthUserId() {
   try {
     const user = localStorage.getItem('user')
-    if (user) return JSON.parse(user).id
+    if (user) {
+      const parsed = JSON.parse(user)
+      return parsed.user?.id || parsed.id || null
+    }
   } catch { /* ignore */ }
   return null
 }

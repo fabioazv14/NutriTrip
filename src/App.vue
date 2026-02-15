@@ -83,7 +83,7 @@ function handleLogout() {
 <template>
   <nav v-if="showNavbar">
     <div class="nav-left">
-      <RouterLink :to="userName ? '/dashboard' : '/'" class="brand">🥗 NutriTrip</RouterLink>
+      <RouterLink :to="userName ? '/dashboard' : '/'" class="brand"><img src="../public/NutriTripBanner.png" alt="NutriTrip Logo" /></RouterLink>
       <RouterLink to="/dashboard">Dashboard</RouterLink>
       <RouterLink to="/meals">Meals</RouterLink>
       <RouterLink to="/chatbot">Chatbot</RouterLink>
@@ -267,6 +267,10 @@ nav {
 /* Brand link */
 .brand {
   text-decoration: none;
+}
+.brand img {
+  height: 32px;
+  width: auto;
 }
 
 .brand.router-link-active::after {

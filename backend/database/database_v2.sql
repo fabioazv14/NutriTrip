@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `nutritrip`.`Utilizador` (
   `Id` INT NOT NULL,
   `Nome` VARCHAR(64) NOT NULL,
   `Email` VARCHAR(256) NOT NULL,
+  `Password` VARCHAR(255) NULL,
   `Dob` DATE NOT NULL,
   `Genero` ENUM('M', 'F', 'O') NOT NULL,
   `UltimoPeriodo` DATE NULL,
@@ -259,6 +260,95 @@ END$$
 
 DELIMITER ;
 
+-- -----------------------------------------------------
+-- Table `nutritrip`.`PerfilUtilizador`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`PerfilUtilizador` (
+  `Id` INT AUTO_INCREMENT PRIMARY KEY,
+  `Utilizador` INT NOT NULL,
+  `Objetivo` VARCHAR(64) NULL,
+  `Dieta` TEXT NULL,
+  `Alergias` TEXT NULL,
+  `Orcamento` DECIMAL(10,2) NULL,
+  FOREIGN KEY (`Utilizador`) REFERENCES `nutritrip`.`Utilizador`(`Id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `nutritrip`.`PreferenciaAprendida`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`PreferenciaAprendida` (
+  `Id` INT AUTO_INCREMENT PRIMARY KEY,
+  `Utilizador` INT NOT NULL,
+  `Tipo` VARCHAR(32) NOT NULL,
+  `Tag` VARCHAR(64) NOT NULL,
+  `Fonte` VARCHAR(32) NULL,
+  FOREIGN KEY (`Utilizador`) REFERENCES `nutritrip`.`Utilizador`(`Id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `nutritrip`.`Tag`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`Tag` (
+  `Id` INT AUTO_INCREMENT PRIMARY KEY,
+  `Tipo` VARCHAR(64) NOT NULL
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `nutritrip`.`UtilizadorTag`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`UtilizadorTag` (
+  `Utilizador` INT NOT NULL,
+  `Tag` INT NOT NULL,
+  PRIMARY KEY (`Utilizador`, `Tag`),
+  FOREIGN KEY (`Utilizador`) REFERENCES `nutritrip`.`Utilizador`(`Id`) ON DELETE CASCADE,
+  FOREIGN KEY (`Tag`) REFERENCES `nutritrip`.`Tag`(`Id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `nutritrip`.`ChatSession`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`ChatSession` (
+  `Id` VARCHAR(36) PRIMARY KEY,
+  `Utilizador` INT NOT NULL,
+  `Titulo` VARCHAR(100) NULL,
+  `CriadoEm` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `AtualizadoEm` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`Utilizador`) REFERENCES `nutritrip`.`Utilizador`(`Id`) ON DELETE CASCADE,
+  INDEX `idx_chat_session_user` (`Utilizador`)
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `nutritrip`.`ChatMensagem`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`ChatMensagem` (
+  `Id` INT AUTO_INCREMENT PRIMARY KEY,
+  `Sessao` VARCHAR(36) NOT NULL,
+  `Role` ENUM('user', 'assistant', 'system') NOT NULL,
+  `Conteudo` TEXT NOT NULL,
+  `CriadoEm` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`Sessao`) REFERENCES `nutritrip`.`ChatSession`(`Id`) ON DELETE CASCADE,
+  INDEX `idx_chat_msg_session` (`Sessao`)
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `nutritrip`.`RegistoRefeicao`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `nutritrip`.`RegistoRefeicao` (
+  `Id` INT AUTO_INCREMENT PRIMARY KEY,
+  `Utilizador` INT NOT NULL,
+  `TipoRefeicao` ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL,
+  `Nome` VARCHAR(255) NULL,
+  `Notas` TEXT NULL,
+  `Imagem` LONGTEXT NULL,
+  `Calorias` INT DEFAULT 0,
+  `Proteina` DECIMAL(6,1) DEFAULT 0,
+  `Hidratos` DECIMAL(6,1) DEFAULT 0,
+  `Gordura` DECIMAL(6,1) DEFAULT 0,
+  `RegistadoEm` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`Utilizador`) REFERENCES `nutritrip`.`Utilizador`(`Id`) ON DELETE CASCADE,
+  INDEX `idx_meal_user` (`Utilizador`),
+  INDEX `idx_meal_date` (`RegistadoEm`)
+) ENGINE=InnoDB;
 DELIMITER $$
 
 CREATE EVENT IF NOT EXISTS `ev_ajuste_inteligente_preferencias`

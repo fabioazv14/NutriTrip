@@ -1,116 +1,130 @@
-import { getDb } from '../config/db.js'
+import { query } from '../config/mysql.js'
 import { v4 as uuidv4 } from 'uuid'
 
+/**
+ * Chat model — uses MySQL ChatSession / ChatMensagem tables.
+ * All methods are async (MySQL driver is promise-based).
+ */
 export const chatModel = {
   /**
    * Create a new chat session
    */
-  createSession(userId, title = null) {
-    const db = getDb()
+  async createSession(userId, title = null) {
     const id = uuidv4()
-    db.prepare(
-      'INSERT INTO chat_sessions (id, user_id, title) VALUES (?, ?, ?)'
-    ).run(id, userId, title)
+    await query(
+      'INSERT INTO ChatSession (Id, Utilizador, Titulo) VALUES (?, ?, ?)',
+      [id, userId, title]
+    )
     return { id, userId, title }
   },
 
   /**
    * Get or create session
    */
-  getOrCreateSession(sessionId, userId) {
-    const db = getDb()
-    let session = db.prepare('SELECT * FROM chat_sessions WHERE id = ?').get(sessionId)
+  async getOrCreateSession(sessionId, userId) {
+    const rows = await query('SELECT * FROM ChatSession WHERE Id = ?', [sessionId])
 
-    if (!session) {
-      db.prepare(
-        'INSERT INTO chat_sessions (id, user_id) VALUES (?, ?)'
-      ).run(sessionId, userId)
-      session = { id: sessionId, user_id: userId, title: null }
+    if (rows.length === 0) {
+      await query(
+        'INSERT INTO ChatSession (Id, Utilizador) VALUES (?, ?)',
+        [sessionId, userId]
+      )
+      return { id: sessionId, user_id: userId, title: null }
     }
 
-    return session
+    const s = rows[0]
+    return { id: s.Id, user_id: s.Utilizador, title: s.Titulo }
   },
 
   /**
    * Save a message to a session
    */
-  addMessage(sessionId, role, content) {
-    const db = getDb()
-    db.prepare(
-      'INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)'
-    ).run(sessionId, role, content)
+  async addMessage(sessionId, role, content) {
+    await query(
+      'INSERT INTO ChatMensagem (Sessao, Role, Conteudo) VALUES (?, ?, ?)',
+      [sessionId, role, content]
+    )
   },
 
   /**
    * Get all messages for a session
    */
-  getMessages(sessionId, limit = 50) {
-    const db = getDb()
-    return db.prepare(
-      'SELECT role, content, created_at FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC LIMIT ?'
-    ).all(sessionId, limit)
+  async getMessages(sessionId, limit = 50) {
+    const rows = await query(
+      'SELECT Role as role, Conteudo as content, CriadoEm as created_at FROM ChatMensagem WHERE Sessao = ? ORDER BY CriadoEm ASC LIMIT ?',
+      [sessionId, limit]
+    )
+    return rows
   },
 
   /**
    * Get recent messages for AI context (last N messages)
    */
-  getRecentMessages(sessionId, limit = 20) {
-    const db = getDb()
-    const rows = db.prepare(`
-      SELECT role, content FROM chat_messages
-      WHERE session_id = ? AND role IN ('user', 'assistant')
-      ORDER BY created_at DESC LIMIT ?
-    `).all(sessionId, limit)
-
+  async getRecentMessages(sessionId, limit = 20) {
+    const rows = await query(
+      `SELECT Role as role, Conteudo as content FROM ChatMensagem
+       WHERE Sessao = ? AND Role IN ('user', 'assistant')
+       ORDER BY CriadoEm DESC LIMIT ?`,
+      [sessionId, limit]
+    )
     return rows.reverse() // oldest first
   },
 
   /**
    * Update session title (from first user message)
    */
-  updateTitle(sessionId, title) {
-    const db = getDb()
-    db.prepare(
-      'UPDATE chat_sessions SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND title IS NULL'
-    ).run(title.substring(0, 100), sessionId)
+  async updateTitle(sessionId, title) {
+    await query(
+      'UPDATE ChatSession SET Titulo = ?, AtualizadoEm = CURRENT_TIMESTAMP WHERE Id = ? AND Titulo IS NULL',
+      [title.substring(0, 100), sessionId]
+    )
   },
 
   /**
    * Get all sessions for a user
    */
-  getUserSessions(userId) {
-    const db = getDb()
-    return db.prepare(`
-      SELECT s.*, 
-        (SELECT COUNT(*) FROM chat_messages WHERE session_id = s.id) as message_count,
-        (SELECT content FROM chat_messages WHERE session_id = s.id AND role = 'user' ORDER BY created_at ASC LIMIT 1) as first_message
-      FROM chat_sessions s
-      WHERE s.user_id = ?
-      ORDER BY s.updated_at DESC
-    `).all(userId)
+  async getUserSessions(userId) {
+    const rows = await query(
+      `SELECT s.*,
+        (SELECT COUNT(*) FROM ChatMensagem WHERE Sessao = s.Id) as message_count,
+        (SELECT Conteudo FROM ChatMensagem WHERE Sessao = s.Id AND Role = 'user' ORDER BY CriadoEm ASC LIMIT 1) as first_message
+       FROM ChatSession s
+       WHERE s.Utilizador = ?
+       ORDER BY s.AtualizadoEm DESC`,
+      [userId]
+    )
+    return rows.map(s => ({
+      id: s.Id,
+      user_id: s.Utilizador,
+      title: s.Titulo,
+      created_at: s.CriadoEm,
+      updated_at: s.AtualizadoEm,
+      message_count: s.message_count,
+      first_message: s.first_message,
+    }))
   },
 
   /**
    * Delete a session and its messages
    */
-  deleteSession(sessionId) {
-    const db = getDb()
-    db.prepare('DELETE FROM chat_messages WHERE session_id = ?').run(sessionId)
-    db.prepare('DELETE FROM chat_sessions WHERE id = ?').run(sessionId)
+  async deleteSession(sessionId) {
+    await query('DELETE FROM ChatMensagem WHERE Sessao = ?', [sessionId])
+    await query('DELETE FROM ChatSession WHERE Id = ?', [sessionId])
   },
 
   /**
    * Get all user messages (for preference extraction)
    */
-  getAllUserMessages(userId, limit = 100) {
-    const db = getDb()
-    return db.prepare(`
-      SELECT m.content, m.created_at
-      FROM chat_messages m
-      JOIN chat_sessions s ON m.session_id = s.id
-      WHERE s.user_id = ? AND m.role = 'user'
-      ORDER BY m.created_at DESC
-      LIMIT ?
-    `).all(userId, limit)
+  async getAllUserMessages(userId, limit = 100) {
+    const rows = await query(
+      `SELECT m.Conteudo as content, m.CriadoEm as created_at
+       FROM ChatMensagem m
+       JOIN ChatSession s ON m.Sessao = s.Id
+       WHERE s.Utilizador = ? AND m.Role = 'user'
+       ORDER BY m.CriadoEm DESC
+       LIMIT ?`,
+      [userId, limit]
+    )
+    return rows
   },
 }

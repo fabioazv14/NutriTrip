@@ -54,7 +54,7 @@ async function handleRegister() {
     }
     localStorage.setItem('nutritrip_profile', JSON.stringify(defaultProfile))
 
-    router.push('/questionnaire')
+    router.push('/onboarding')
   } catch (e) {
     error.value = e.message
   } finally {

@@ -118,7 +118,7 @@ export const aiService = {
     // Get today's meals for context
     let mealsSummary = ''
     try {
-      const todayMeals = mealModel.getToday(userId)
+      const todayMeals = await mealModel.getToday(userId)
       mealsSummary = buildMealsSummary(todayMeals)
     } catch { /* DB not ready yet */ }
 
@@ -207,13 +207,13 @@ export const aiService = {
 
     let mealsSummary = ''
     try {
-      const todayMeals = mealModel.getToday(userId)
+      const todayMeals = await mealModel.getToday(userId)
       mealsSummary = buildMealsSummary(todayMeals)
     } catch { /* DB not ready */ }
 
     let recentMealNames = ''
     try {
-      const recent = mealModel.getRecent(userId, 3)
+      const recent = await mealModel.getRecent(userId, 3)
       if (recent.length > 0) {
         const names = recent.filter(m => m.name).map(m => m.name)
         if (names.length > 0) {

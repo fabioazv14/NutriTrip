@@ -61,7 +61,7 @@ async function handleRegister() {
     localStorage.setItem('nutritrip_profile', JSON.stringify(response))
     window.dispatchEvent(new Event('storage')) // Force update if needed
     // Redirect to Questionnaire on sign up
-    router.push('/questionnaire')
+    router.push('/onboarding')
   } catch (err) {
     console.error(err)
     error.value = err.message || 'Registration failed'
