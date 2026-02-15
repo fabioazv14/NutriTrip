@@ -3,7 +3,6 @@ import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import QuestionCard from './QuestionCard.vue'
 import { questions } from '@/data/questions'
-import { nutritionApi } from '@/services/api'
 
 const router = useRouter()
 
@@ -13,32 +12,35 @@ const answered = ref(false)
 const swiping = ref(false)
 const showCard = ref(true)
 const finishing = ref(false)
-const direction = ref('forward') // 'forward' or 'back'
+const direction = ref('forward')
 
-const currentQuestion = computed(() => questions[currentIndex.value])
-const isLastQuestion = computed(() => currentIndex.value === questions.length - 1)
+// Filter questions based on showIf conditions
+const visibleQuestions = computed(() =>
+  questions.filter(q => !q.showIf || q.showIf(answers.value))
+)
+
+const currentQuestion = computed(() => visibleQuestions.value[currentIndex.value])
+const isLastQuestion = computed(() => currentIndex.value === visibleQuestions.value.length - 1)
 const isFirstQuestion = computed(() => currentIndex.value === 0)
+
 const savedAnswer = computed(() => {
-  const ans = answers.value[currentIndex.value]
+  const realIndex = questions.indexOf(currentQuestion.value)
+  const ans = answers.value[realIndex]
   if (!ans) return null
-  // For multiple: ans is an array of values
-  // For single: ans is { label, value }
   if (Array.isArray(ans)) return ans
   return ans.value
 })
 
 function handleAnswer(option) {
-  // option is either { label, value } (single) or [...values] (multiple)
-  answers.value[currentIndex.value] = option
+  const realIndex = questions.indexOf(currentQuestion.value)
+  answers.value[realIndex] = option
   answered.value = true
-  // For multiple, consider answered if at least 1 selected
   if (Array.isArray(option) && option.length === 0) {
     answered.value = false
   }
-  console.log('Selected:', option)
 }
 
-async function nextQuestion() {
+function nextQuestion() {
   if (swiping.value) return
 
   if (!isLastQuestion.value) {
@@ -48,32 +50,24 @@ async function nextQuestion() {
 
     setTimeout(async () => {
       currentIndex.value++
-      // Restore previous answer if it exists
-      answered.value = !!answers.value[currentIndex.value]
+      const realIndex = questions.indexOf(visibleQuestions.value[currentIndex.value])
+      answered.value = !!answers.value[realIndex]
       await nextTick()
       showCard.value = true
       swiping.value = false
     }, 400)
   } else {
-    // Save profile to localStorage before navigating
+    // Save profile
     const profile = {
       goal: answers.value[0]?.value || null,
-      diet: Array.isArray(answers.value[1]) ? answers.value[1] : (answers.value[1]?.value ? [answers.value[1].value] : null),
-      allergies: Array.isArray(answers.value[2]) ? answers.value[2] : (answers.value[2]?.value ? [answers.value[2].value] : null),
-      budget: answers.value[3]?.value || null,
+      sex: answers.value[1]?.value || null,
+      gender: answers.value[2]?.value || null,
+      diet: Array.isArray(answers.value[3]) ? answers.value[3] : (answers.value[3]?.value ? [answers.value[3].value] : null),
+      allergies: Array.isArray(answers.value[4]) ? answers.value[4] : (answers.value[4]?.value ? [answers.value[4].value] : null),
+      budget: answers.value[5]?.value || null,
+      menstrualCycle: answers.value[6]?.value || null,
     }
     localStorage.setItem('nutritrip_profile', JSON.stringify(profile))
-
-    // Also save profile to MySQL if user is logged in
-    try {
-      const user = localStorage.getItem('user')
-      if (user) {
-        const userData = JSON.parse(user)
-        if (userData.id) {
-          await nutritionApi.saveProfile(userData.id, profile)
-        }
-      }
-    } catch { /* continue even if save fails */ }
 
     finishing.value = true
     setTimeout(() => {
@@ -91,7 +85,8 @@ function prevQuestion() {
 
   setTimeout(async () => {
     currentIndex.value--
-    answered.value = !!answers.value[currentIndex.value]
+    const realIndex = questions.indexOf(visibleQuestions.value[currentIndex.value])
+    answered.value = !!answers.value[realIndex]
     await nextTick()
     showCard.value = true
     swiping.value = false
@@ -102,11 +97,11 @@ function prevQuestion() {
 <template>
   <div class="question" :class="{ 'exit-animation': finishing }">
     <div class="progress">
-      <span>{{ currentIndex + 1 }} / {{ questions.length }}</span>
+      <span>{{ currentIndex + 1 }} / {{ visibleQuestions.length }}</span>
       <div class="progress-bar">
         <div
           class="progress-fill"
-          :style="{ width: ((currentIndex + 1) / questions.length) * 100 + '%' }"
+          :style="{ width: ((currentIndex + 1) / visibleQuestions.length) * 100 + '%' }"
         ></div>
       </div>
     </div>
@@ -130,6 +125,7 @@ function prevQuestion() {
           :question="currentQuestion.question"
           :options="currentQuestion.options"
           :multiple="currentQuestion.multiple || false"
+          :grid="currentQuestion.grid || false"
           :selected-value="savedAnswer"
           @select="handleAnswer"
         />
@@ -264,12 +260,12 @@ function prevQuestion() {
 }
 
 .swipe-forward-leave-to {
-  transform: translateX(-120%) rotate(-8deg);
+  transform: translateX(-120%);
   opacity: 0;
 }
 
 .swipe-forward-enter-from {
-  transform: translateX(100%) rotate(5deg);
+  transform: translateX(100%);
   opacity: 0;
 }
 
@@ -280,12 +276,12 @@ function prevQuestion() {
 }
 
 .swipe-back-leave-to {
-  transform: translateX(120%) rotate(8deg);
+  transform: translateX(120%);
   opacity: 0;
 }
 
 .swipe-back-enter-from {
-  transform: translateX(-100%) rotate(-5deg);
+  transform: translateX(-100%);
   opacity: 0;
 }
 

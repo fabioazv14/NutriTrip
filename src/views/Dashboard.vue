@@ -118,6 +118,7 @@ onMounted(() => {
   updateStreak()
   loadTags()
   loadSuggestions()
+  loadPeriodData()
 })
 
 async function loadSuggestions() {
@@ -153,6 +154,52 @@ function updateStreak() {
     localStorage.setItem('nutritrip_streak', streak.value)
     localStorage.setItem('nutritrip_last_visit', todayStr)
   }
+}
+
+// ─── Tags / Preferences ───────────────────────
+
+// ─── Period / Cycle Tracker ───────────────────
+const showCycleTracker = computed(() =>
+  profile.value?.sex === 'female' && profile.value?.menstrualCycle === 'yes'
+)
+
+const lastPeriodDate = ref(null)
+const cycleLength = ref(28)
+
+const cyclePhase = computed(() => {
+  if (!lastPeriodDate.value) return null
+  const start = new Date(lastPeriodDate.value)
+  const now = new Date()
+  const daysSince = Math.floor((now - start) / 86400000)
+  const dayInCycle = ((daysSince % cycleLength.value) + cycleLength.value) % cycleLength.value
+
+  if (dayInCycle <= 5) return { name: 'Menstrual', day: dayInCycle + 1, emoji: '🔴', color: '#fecaca', textColor: '#991b1b', tip: 'Focus on iron-rich foods like spinach, lentils, and red meat. Stay hydrated and consider anti-inflammatory foods.' }
+  if (dayInCycle <= 13) return { name: 'Follicular', day: dayInCycle + 1, emoji: '🌱', color: '#d1fae5', textColor: '#065f46', tip: 'Great time for complex carbs and fermented foods. Your energy is rising — fuel it with whole grains and fresh veggies.' }
+  if (dayInCycle <= 16) return { name: 'Ovulation', day: dayInCycle + 1, emoji: '✨', color: '#fef3c7', textColor: '#92400e', tip: 'Peak energy! Focus on lighter meals, antioxidant-rich fruits, and fiber. Great time for raw veggies and smoothies.' }
+  return { name: 'Luteal', day: dayInCycle + 1, emoji: '🌙', color: '#e0e7ff', textColor: '#3730a3', tip: 'Cravings may increase. Prioritize magnesium-rich foods (dark chocolate, nuts), healthy fats, and complex carbs to stabilize mood.' }
+})
+
+const cycleProgress = computed(() => {
+  if (!lastPeriodDate.value) return 0
+  const start = new Date(lastPeriodDate.value)
+  const now = new Date()
+  const daysSince = Math.floor((now - start) / 86400000)
+  const dayInCycle = ((daysSince % cycleLength.value) + cycleLength.value) % cycleLength.value
+  return ((dayInCycle + 1) / cycleLength.value) * 100
+})
+
+function savePeriodDate() {
+  if (lastPeriodDate.value) {
+    localStorage.setItem('nutritrip_last_period', lastPeriodDate.value)
+    localStorage.setItem('nutritrip_cycle_length', cycleLength.value.toString())
+  }
+}
+
+function loadPeriodData() {
+  const saved = localStorage.getItem('nutritrip_last_period')
+  const savedLength = localStorage.getItem('nutritrip_cycle_length')
+  if (saved) lastPeriodDate.value = saved
+  if (savedLength) cycleLength.value = parseInt(savedLength)
 }
 
 // ─── Tags / Preferences ───────────────────────
@@ -347,6 +394,66 @@ async function removeTag(tagId) {
           <polyline points="9 18 15 12 9 6"/>
         </svg>
       </button>
+    </div>
+
+    <!-- Period / Cycle Tracker -->
+    <div v-if="showCycleTracker" class="card cycle-card">
+      <div class="card-header">
+        <h2>🩸 Cycle Tracker</h2>
+        <span v-if="cyclePhase" class="cycle-phase-badge" :style="{ background: cyclePhase.color, color: cyclePhase.textColor }">
+          {{ cyclePhase.emoji }} {{ cyclePhase.name }} phase
+        </span>
+      </div>
+
+      <!-- Setup: ask for last period date -->
+      <div v-if="!lastPeriodDate" class="cycle-setup">
+        <p class="cycle-setup-text">Set your last period start date to get personalized nutrition tips for each phase of your cycle.</p>
+        <div class="cycle-input-row">
+          <label class="cycle-label">
+            Last period started
+            <input type="date" v-model="lastPeriodDate" class="cycle-date-input" @change="savePeriodDate" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Active tracker -->
+      <div v-else class="cycle-active">
+        <div class="cycle-progress-row">
+          <div class="cycle-day-info">
+            <span class="cycle-day-number">Day {{ cyclePhase?.day }}</span>
+            <span class="cycle-day-total">of {{ cycleLength }}-day cycle</span>
+          </div>
+          <div class="cycle-progress-bar">
+            <div class="cycle-progress-fill" :style="{ width: cycleProgress + '%', background: cyclePhase?.textColor }"></div>
+            <div class="cycle-phases-markers">
+              <span class="cycle-marker" style="left: 0%">🔴</span>
+              <span class="cycle-marker" style="left: 21%">🌱</span>
+              <span class="cycle-marker" style="left: 50%">✨</span>
+              <span class="cycle-marker" style="left: 60%">🌙</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nutrition tip for current phase -->
+        <div v-if="cyclePhase" class="cycle-tip" :style="{ background: cyclePhase.color, color: cyclePhase.textColor }">
+          <span class="cycle-tip-label">{{ cyclePhase.emoji }} {{ cyclePhase.name }} Phase Nutrition</span>
+          <p class="cycle-tip-text">{{ cyclePhase.tip }}</p>
+        </div>
+
+        <!-- Edit settings -->
+        <div class="cycle-settings">
+          <label class="cycle-setting-item">
+            <span class="cycle-setting-label">Last period</span>
+            <input type="date" v-model="lastPeriodDate" class="cycle-date-input small" @change="savePeriodDate" />
+          </label>
+          <label class="cycle-setting-item">
+            <span class="cycle-setting-label">Cycle length</span>
+            <select v-model="cycleLength" class="cycle-select" @change="savePeriodDate">
+              <option v-for="n in 15" :key="n" :value="n + 20">{{ n + 20 }} days</option>
+            </select>
+          </label>
+        </div>
+      </div>
     </div>
 
     <!-- Learned Preferences (Tags) -->
@@ -1054,5 +1161,185 @@ async function removeTag(tagId) {
   .quick-actions {
     grid-template-columns: 1fr;
   }
+
+  .cycle-settings {
+    flex-direction: column;
+  }
+}
+
+/* Cycle Tracker */
+.cycle-card {
+  margin-bottom: 16px;
+}
+
+.cycle-phase-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.cycle-setup {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.cycle-setup-text {
+  font-size: 0.88rem;
+  color: #6b7280;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.cycle-input-row {
+  display: flex;
+  justify-content: center;
+}
+
+.cycle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cycle-date-input {
+  padding: 10px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.cycle-date-input:focus {
+  border-color: #f472b6;
+}
+
+.cycle-date-input.small {
+  padding: 7px 10px;
+  font-size: 0.8rem;
+}
+
+.cycle-active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cycle-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cycle-day-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+
+.cycle-day-number {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.cycle-day-total {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.cycle-progress-bar {
+  flex: 1;
+  height: 10px;
+  background: #f3f4f6;
+  border-radius: 100px;
+  overflow: visible;
+  position: relative;
+}
+
+.cycle-progress-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.5s ease;
+  opacity: 0.7;
+}
+
+.cycle-phases-markers {
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 0;
+}
+
+.cycle-marker {
+  position: absolute;
+  font-size: 0.6rem;
+  transform: translateX(-50%);
+  top: -4px;
+}
+
+.cycle-tip {
+  padding: 14px 18px;
+  border-radius: 12px;
+}
+
+.cycle-tip-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.cycle-tip-text {
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.cycle-settings {
+  display: flex;
+  gap: 16px;
+  padding-top: 4px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.cycle-setting-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.cycle-setting-label {
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.cycle-select {
+  padding: 7px 10px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  outline: none;
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+}
+
+.cycle-select:focus {
+  border-color: #f472b6;
 }
 </style>
